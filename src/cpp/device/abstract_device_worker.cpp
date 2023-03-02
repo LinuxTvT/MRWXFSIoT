@@ -3,35 +3,16 @@
 
 #define jk_starting "starting"
 
-AbstractDeviceWorker::AbstractDeviceWorker(const QString &strFileConfig, //
+AbstractDeviceWorker::AbstractDeviceWorker(const QString &strName, //
+                                           const QString &strFileConfig, //
                                            AbstractService *pParentService, //
                                            QThread *pThread)
-    : RunableObject{ strFileConfig, pParentService, pThread }
+    : RunableObject{ strName, strFileConfig, pParentService, pThread }
 {
     m_pService = pParentService;
 }
 
 AbstractDeviceWorker::~AbstractDeviceWorker() { }
-
-void AbstractDeviceWorker::setDeviceStatus(EDeviceStatus eNewStatus)
-{
-    m_mtCommonStatus.lock();
-    m_eDeviceStatus = eNewStatus;
-    m_mtCommonStatus.unlock();
-}
-
-AbstractDeviceWorker::EDeviceStatus AbstractDeviceWorker::deviceStatus()
-{
-    m_mtCommonStatus.lock();
-    EDeviceStatus l_eTmpRet = m_eDeviceStatus;
-    m_mtCommonStatus.unlock();
-    return l_eTmpRet;
-}
-
-void AbstractDeviceWorker::commonStatus(QJsonObject &joStatus)
-{
-    joStatus["device"] = DEVICE_STATUS_MAP[deviceStatus()];
-}
 
 bool AbstractDeviceWorker::cancelCommand(uint uiClientID, const QSet<int> &iSetRequestIds)
 {
@@ -41,20 +22,18 @@ bool AbstractDeviceWorker::cancelCommand(uint uiClientID, const QSet<int> &iSetR
     return true;
 }
 
-bool AbstractDeviceWorker::doCommand(XFSIoTCommandEvent *pCommandEvent)
+bool AbstractDeviceWorker::isReady()
 {
-    debug(QString("DO COMMAND [%1]").arg(pCommandEvent->commandName()));
-    if (pCommandEvent->isCanceled()) {
-        warn("Command was canceled");
-        this->service()->notifyCanceled(pCommandEvent);
-        return true;
-    } else {
-        return false;
-    }
+    QMutexLocker LOCKER(&m_muxReady);
+    return m_isReady;
+}
+void AbstractDeviceWorker::setReady(bool newVal)
+{
+    QMutexLocker LOCKER(&m_muxReady);
+    m_isReady = newVal;
 }
 
 bool AbstractDeviceWorker::init()
 {
-    setDeviceStatus(ST_starting);
     return true;
 }

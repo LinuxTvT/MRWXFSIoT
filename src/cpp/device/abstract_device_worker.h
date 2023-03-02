@@ -2,11 +2,11 @@
 #define ABSTRACTDEVICEWORKER_H
 
 #include "event/xfs_iot_msg_event.h"
-#include "qjsonobject.h"
-#include "qthread.h"
 #include "runable_object.h"
+#include <QJsonObject>
 #include <QMutex>
 #include <QObject>
+#include <QThread>
 
 class AbstractService;
 
@@ -43,28 +43,22 @@ public:
                                                                       JS_VALUE(ST, fraudAttempt), //
                                                                       JS_VALUE(ST, potentialFraud), //
                                                                       JS_VALUE(ST, starting) };
-    explicit AbstractDeviceWorker(const QString &strFileConfig, //
+    explicit AbstractDeviceWorker(const QString &strName, //
+                                  const QString &strFileConfig, //
                                   AbstractService *pParentService, //
                                   QThread *pThread);
     virtual ~AbstractDeviceWorker();
-    virtual void commonStatus(QJsonObject &joStatus);
-    virtual bool doCommand(XFSIoTCommandEvent *pCommandEvent);
     virtual bool cancelCommand(uint uiClientID, int iRequestID = -1) = 0;
     virtual bool cancelCommand(uint uiClientID, const QSet<int> &iSetRequestIds);
+    bool isReady();
+    void setReady(bool newVal = true);
     inline const AbstractService *service() const { return m_pService; }
-    void setDeviceStatus(EDeviceStatus eNewStatus);
-    EDeviceStatus deviceStatus();
 
 private:
-    // QJsonObject m_joCommonStatus;
-    QMutex m_mtCommonStatus;
-    EDeviceStatus m_eDeviceStatus;
     AbstractService *m_pService;
+    bool m_isReady = false;
+    QMutex m_muxReady;
 
-protected:
-    bool setCommonStatus(const QString &strKey, const QString &strValue);
-
-    // RunableObject interface
 protected:
     virtual bool init() override;
 };
