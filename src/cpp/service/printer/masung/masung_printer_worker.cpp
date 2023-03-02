@@ -9,43 +9,14 @@
 #include "service/printer/printer_service.h"
 #include "xfs_iot_standard.h"
 
-#define PRINT_TO_CONSOLE
+//#define PRINT_TO_CONSOLE
 
 #ifdef PRINT_TO_CONSOLE
-#    define f(x) test##x
+#    include "masung_printer_simulator.h"
+#    define MASUNG_API(x) test##x
 #else
-#    define f(x) #    x
+#    define MASUNG_API(x) x
 #endif
-
-typedef int (*Test)(char *bInfodata);
-
-QStringList g_strTestBuffer;
-int g_iCurLine = 0;
-int testPrintString(const char *strData, int iImme)
-{
-    if (iImme == 0) {
-        qDebug().noquote() << strData;
-    } else {
-        g_strTestBuffer.append(strData);
-    }
-    return 0;
-}
-
-int testPrintFeedline(int iLine)
-{
-    for (int i = 0; i < iLine; i++) {
-        qDebug().noquote() << "__";
-    }
-    return 0;
-}
-
-int testPrintChangeRow()
-{
-    while (g_strTestBuffer.isEmpty()) {
-        qDebug().noquote() << g_strTestBuffer.takeFirst();
-    }
-    return 0;
-}
 
 #define RESOLVE_FUNCTION(name, type)                                                                                   \
     name = (type)m_pSDKLib->resolve(#name);                                                                            \
@@ -54,9 +25,8 @@ int testPrintChangeRow()
     }
 
 MasungPrinterWorker::MasungPrinterWorker(const QString &strFileConfig, PrinterService *pParent)
-    : DeviceWorker{ strFileConfig, pParent }
+    : PrinterWorker{ "MasungPrinterWorker", strFileConfig, pParent }
 {
-    this->setName("MasungPrinterWorker");
 }
 
 MasungPrinterWorker::~MasungPrinterWorker() { }
@@ -64,17 +34,23 @@ MasungPrinterWorker::~MasungPrinterWorker() { }
 bool MasungPrinterWorker::init()
 {
     AbstractDeviceWorker::init();
+    setDeviceStatus(ST_noDevice);
     log("Init device");
-    SetPrintport("COM1", 115200);
-    // QThread::sleep(20);
-    int l_iRet = SetInit();
-    if (l_iRet == 0) {
-        log("Init device success");
-        setDeviceStatus(ST_online);
-    } else {
-        log("Init device ERROR");
-        setDeviceStatus(ST_hardwareError);
+    int l_iResult = 0;
+    if (m_strConnectType == "USB") {
+        log("Connect by USB");
+        l_iResult = SetUsbportauto();
     }
+    if (l_iResult == MS_SUCCESS) {
+        setDeviceStatus(ST_offline);
+        log("Connect Success");
+    } else {
+        error("Connect ERROR");
+        return false;
+    }
+
+    initDevice();
+
     return true;
 }
 
@@ -88,17 +64,25 @@ bool MasungPrinterWorker::loadSDK()
         RESOLVE_FUNCTION(GetSDKinformation, int (*)(char *));
         RESOLVE_FUNCTION(SetPrintport, int (*)(const char *, int));
         RESOLVE_FUNCTION(SetInit, int (*)());
+        RESOLVE_FUNCTION(SetUsbportauto, int (*)());
+        RESOLVE_FUNCTION(GetProductinformation, int (*)(int, char *, int));
+        RESOLVE_FUNCTION(GetStatusspecial, int (*)());
+        RESOLVE_FUNCTION(PrintString, int (*)(const char *, int));
+        RESOLVE_FUNCTION(PrintFeedline, int (*)(int));
+        RESOLVE_FUNCTION(PrintChangeRow, int (*)());
+        RESOLVE_FUNCTION(PrintCutpaper, int (*)(int));
+        RESOLVE_FUNCTION(PrintDiskbmpfile, int (*)(const char *));
 
         char l_acVersionInfo[128];
         if (0 == GetSDKinformation(l_acVersionInfo)) {
             m_strSDKVersion = QString{ l_acVersionInfo };
-            // log(QString("Loading SDK success, SDK Version [%1]").arg(QString(l_acVersionInfo)));
+            log(QString("Loading SDK success, SDK Version [%1]").arg(QString(l_acVersionInfo)));
         } else {
-            // warn("Loading SDK success, BUT get version information ERROR");
+            warn("Loading SDK success, BUT get version information ERROR");
         }
         return true;
     } else {
-        // log(QString("Loading SDK DLL failed, error [%1]").arg(m_pSDKLib->errorString()));
+        log(QString("Loading SDK DLL failed, error [%1]").arg(m_pSDKLib->errorString()));
         return false;
     }
 }
@@ -106,7 +90,7 @@ bool MasungPrinterWorker::loadSDK()
 bool MasungPrinterWorker::loadConfig(const QJsonObject &config)
 {
     // Load configure of object
-    if (SelfServiceObject::loadConfig(config)) {
+    if (PrinterWorker::loadConfig(config)) {
         log("Load Configure success");
     } else {
         error("Load Configure ERROR");
@@ -122,30 +106,50 @@ bool MasungPrinterWorker::loadConfig(const QJsonObject &config)
     return true;
 }
 
-bool MasungPrinterWorker::printString(const QString &str, int iImme)
+bool MasungPrinterWorker::printString(const QString &str)
 {
-    QThread::sleep(1);
-    return (0 == f(PrintString)(str.toUtf8().constData(), iImme));
+    m_iCurX = str.length();
+    return (0 == MASUNG_API(PrintString)(str.toUtf8().constData(), 1));
+}
+
+bool MasungPrinterWorker::goTo(int iX, int iY)
+{
+    if (m_iCurY < iY) {
+        feedLine(iY - m_iCurY);
+        m_iCurY = iY;
+    }
+    if (iX > m_iCurX) {
+        printString(QString(iX - m_iCurX, '@'));
+        m_iCurX = iX;
+    }
+    return true;
 }
 
 bool MasungPrinterWorker::feedLine(int iLines)
 {
-    return (0 == f(PrintFeedline)(iLines));
+    // return (0 == MASUNG_API(PrintChangeRow)());
+    return (0 == MASUNG_API(PrintFeedline)(iLines));
 }
 
-bool MasungPrinterWorker::doCommand(XFSIoTCommandEvent *pCommandEvent)
+bool MasungPrinterWorker::executeCommand(XFSIoTCommandEvent *pCommandEvent)
 {
-    if (AbstractDeviceWorker::doCommand(pCommandEvent)) {
+    if (DeviceWorker::executeCommand(pCommandEvent)) {
         return true;
     } else {
         QString l_strCommandName = pCommandEvent->commandName();
         if (l_strCommandName == "Printer.PrintForm") {
             doPrintForm(pCommandEvent);
             return true;
+        } else if (l_strCommandName == "Printer.Reset") {
+            doReset(pCommandEvent);
+            return true;
+        } else if (l_strCommandName == "Common.Status") {
+            doCommonStatus(pCommandEvent);
+            return true;
         } else {
-            service()->notifyCompletionError(pCommandEvent, //
-                                             XFSIoTStandard::JV_UNSUPPORTED_COMMAND, //
-                                             QString("Device can not DO command [%1]").arg(l_strCommandName));
+            service()->notifyCompletion(pCommandEvent, //
+                                        XFSIoTStandard::JV_UNSUPPORTED_COMMAND, //
+                                        QString("Device can not DO command [%1]").arg(l_strCommandName));
             return false;
         }
     }
@@ -153,69 +157,68 @@ bool MasungPrinterWorker::doCommand(XFSIoTCommandEvent *pCommandEvent)
 
 void MasungPrinterWorker::doPrintForm(XFSIoTCommandEvent *pCommandEvent)
 {
-    m_iLineNo = 0;
-    m_strCurrentLine.clear();
     QString l_strFormName = pCommandEvent->payLoad()["formName"].toString();
-    PrinterService *l_pPrinterService = (PrinterService *)this->service();
-    const XFSForm *l_pForm = l_pPrinterService->formRepository()->form(l_strFormName);
+    const XFSForm *l_pForm = ((PrinterService *)service())->form(l_strFormName);
 
-#ifdef PRINT_TO_CONSOLE
-    int m_iFormWidth = l_pForm->size().width();
-    QString m_strColNo;
-    for (int i = 0; i < m_iFormWidth; i++) {
-        m_strColNo.append('0' + (i % 10));
-    }
-    printString(m_strColNo, 0);
-#endif
+    BMPPrinter *l_pBMPPrinter = new BMPPrinter(l_pForm->unit(), l_pForm->size(), this);
 
     const QMap<Position, XFSField *> &field = l_pForm->fieldMapByPosition();
     const QJsonObject &l_joFieldsPayload = pCommandEvent->payLoad()["fields"].toObject();
+    QSet<QString> l_setFieldsPrinted;
     for (auto itr = field.constBegin(); itr != field.constEnd(); itr++) {
-        const QJsonValue l_jvFieldValue = l_joFieldsPayload[(*itr)->name()];
-        if (l_jvFieldValue.isUndefined()) {
-            if ((*itr)->fieldClass().is("required")) {
-                l_pPrinterService->notifyFieldWarningEvent(pCommandEvent, l_pForm, (*itr), "required");
-                continue;
-            }
+        printField(*itr, l_joFieldsPayload, l_setFieldsPrinted, l_pBMPPrinter, false);
+    }
+
+    const QHash<QString, XFSFrame *> &l_refFrames = l_pForm->frames();
+
+    for (auto itr = l_refFrames.constBegin(); itr != l_refFrames.constEnd(); itr++) {
+        printFrame((*itr), l_pBMPPrinter);
+    }
+    l_pBMPPrinter->printToFile("outs/BMPPrinter.bmp");
+    l_pBMPPrinter->deleteLater();
+    // printBitmap("outs/BMPPrinter.bmp");
+    // feedLine(3);
+
+    // cutPaper();
+}
+
+void MasungPrinterWorker::doCommonStatus(XFSIoTCommandEvent *pCommandEvent)
+{
+    QJsonObject l_joPayload;
+    updateDeviceStatus();
+    commonStatus(l_joPayload);
+    printerStatus(l_joPayload);
+
+    service()->notifyCompletion(pCommandEvent, l_joPayload);
+}
+
+void MasungPrinterWorker::doReset(XFSIoTCommandEvent *pCommandEvent)
+{
+    if (isReady()) {
+        log("Reset device");
+        initDevice();
+        if (ST_online == deviceStatus()) {
+            service()->notifyCompletion(pCommandEvent, //
+                                        XFSIoTStandard::JV_COMPLETION_CODE_success, //
+                                        DEVICE_STATUS_MAP_STR.value(m_iHardwareStatus));
         } else {
-            if (l_jvFieldValue.isString()) {
-                QString l_strFieldValue = l_jvFieldValue.toString();
-                int l_iFieldLen = (*itr)->size().width();
-                if (l_strFieldValue.length() > l_iFieldLen) {
-                    const StringElement &l_overflow = (*itr)->overflow();
-                    if (l_overflow.is("terminate")) {
-                        l_pPrinterService->notifyFieldErrorEvent(pCommandEvent, l_pForm, (*itr), "overflow");
-                        return;
-                    } else if (l_overflow.is("truncate")) {
-                        l_strFieldValue.truncate(l_iFieldLen);
-                        l_pPrinterService->notifyFieldWarningEvent(pCommandEvent, l_pForm, (*itr), "overflow");
-                    } else if (l_overflow.is("bestFit")) {
-                        l_strFieldValue.truncate(l_iFieldLen);
-                        l_pPrinterService->notifyFieldWarningEvent(pCommandEvent, l_pForm, (*itr), "overflow");
-                    } else if (l_overflow.is("overwrite")) {
-                        l_pPrinterService->notifyFieldWarningEvent(pCommandEvent, l_pForm, (*itr), "overflow");
-                    } else if (l_overflow.is("wordWrap")) {
-                        l_pPrinterService->notifyFieldErrorEvent(pCommandEvent, l_pForm, (*itr), "notSupported");
-                        return;
-                    } else {
-                        l_pPrinterService->notifyFieldErrorEvent(pCommandEvent, l_pForm, (*itr), "notSupported");
-                        return;
-                    }
-                }
-            } else {
-                l_pPrinterService->notifyFieldWarningEvent(pCommandEvent, l_pForm, (*itr), "notSupported");
-            }
+            service()->notifyCompletion(pCommandEvent, //
+                                        XFSIoTStandard::JV_COMPLETION_CODE_hardwareError, //
+                                        DEVICE_STATUS_MAP_STR.value(m_iHardwareStatus));
         }
-        print((*itr), pCommandEvent->payLoad()["fields"].toObject());
+    } else {
+        service()->notifyCompletion(pCommandEvent, //
+                                    XFSIoTStandard::JV_COMPLETION_CODE_deviceNotReady, //
+                                    DEVICE_STATUS_MAP_STR.value(m_iHardwareStatus));
     }
 }
 
-void MasungPrinterWorker::print(XFSField *pField, const QJsonObject &joPayload)
+void MasungPrinterWorker::printField(XFSField *pField, const QJsonObject &joPayload)
 {
-    // qDebug() << "Print " << pField->name();
     int l_iFieldRow = pField->position().y();
     int l_iFieldCol = pField->position().x();
     QString l_strValue;
+    qDebug() << "Print field: " << pField->name() << pField->position().x() << " , " << pField->position().y();
     if (pField->initialvalue().isEmpty()) {
         const QJsonValue l_jvFieldValue = joPayload[pField->name()];
         if (l_jvFieldValue.isUndefined()) {
@@ -230,14 +233,119 @@ void MasungPrinterWorker::print(XFSField *pField, const QJsonObject &joPayload)
     } else {
         l_strValue = pField->initialvalue();
     }
-    if (m_iLineNo < l_iFieldRow) {
-        printString(m_strCurrentLine, 0);
-        feedLine(l_iFieldRow - m_iLineNo - 1);
-        m_iLineNo = l_iFieldRow;
-        m_strCurrentLine.clear();
+    goTo(l_iFieldCol, l_iFieldRow);
+    if (pField->type().is("text")) {
+        printString(l_strValue);
+    } else if (pField->type().is("graphic")) {
+        printBitmap(l_strValue);
+    } else {
+        error(QString("Can not print field type [%1]").arg(pField->type().value()));
     }
-    if (l_iFieldCol > m_strCurrentLine.size()) {
-        m_strCurrentLine.append(QString(l_iFieldCol - m_strCurrentLine.size(), ' '));
+}
+
+void MasungPrinterWorker::printField(const XFSField *pField, //
+                                     const QJsonObject &joFieldsPayload, //
+                                     QSet<QString> &setPrintedList, //
+                                     BMPPrinter *pBMPPrinter, //
+                                     bool isFollows)
+{
+    if (setPrintedList.contains(pField->name())) {
+        debug(QString("Field[%1] was printed").arg(pField->name()));
+    } else {
+        if (isFollows || pField->previousFollows() == nullptr) {
+            printField2BMPPrinter(pField, joFieldsPayload, pBMPPrinter, isFollows);
+            setPrintedList.insert(pField->name());
+            if (pField->nextFollows() != nullptr) {
+                printField(pField->nextFollows(), joFieldsPayload, setPrintedList, pBMPPrinter, true);
+            }
+        } else {
+            debug(QString("Field[%1] Followed By Other Field").arg(pField->name()));
+        }
     }
-    m_strCurrentLine.append(l_strValue);
+}
+
+void MasungPrinterWorker::printField(XFSField *pField, const QString &strValue)
+{
+    goTo(pField->position().x(), pField->position().y());
+    if (pField->type().is("text")) {
+        printString(strValue);
+    } else if (pField->type().is("graphic")) {
+        printBitmap(strValue);
+    } else {
+        error(QString("Can not print field type [%1]").arg(pField->type().value()));
+    }
+}
+
+void MasungPrinterWorker::printField(XFSField *pField, const QString &strValue, BMPPrinter *pBMPPrinter)
+{
+    pBMPPrinter->printField(pField, strValue);
+}
+
+void MasungPrinterWorker::printFrame(XFSFrame *pFrame, BMPPrinter *pBMPPrinter)
+{
+    pBMPPrinter->goTo(pFrame->position().x(), pFrame->position().y());
+    pBMPPrinter->printFrame(pFrame->size().qSize());
+}
+
+void MasungPrinterWorker::updateDeviceInfo()
+{
+    char l_buff[128];
+    int l_iLen = 0;
+    if (MS_SUCCESS == MASUNG_API(GetProductinformation)(MS_INFO_MODEL, l_buff, l_iLen)) {
+        m_strModel = QString(l_buff);
+        log(QString("Printer Model: [%1]").arg(m_strModel));
+    }
+    if (MS_SUCCESS == MASUNG_API(GetProductinformation)(MS_INFO_MANUFACTURER, l_buff, l_iLen)) {
+        m_strManufacturer = QString(l_buff);
+        log(QString("Printer Manufacturer: [%1]").arg(m_strManufacturer));
+    }
+    if (MS_SUCCESS == MASUNG_API(GetProductinformation)(MS_INFO_FIRMWARE_VERSION, l_buff, l_iLen)) {
+        m_strFirmwareVersion = QString(l_buff);
+        log(QString("Firmware Version: [%1]").arg(m_strFirmwareVersion));
+    }
+}
+
+void MasungPrinterWorker::updateDeviceStatus()
+{
+    debug("Update device status");
+    m_iHardwareStatus = MASUNG_API(GetStatus)();
+    setDeviceStatus(DEVICE_STATUS_MAP.value(m_iHardwareStatus, ST_offline));
+}
+
+void MasungPrinterWorker::cutPaper()
+{
+    if (MS_SUCCESS == MASUNG_API(PrintCutpaper)(0)) {
+        debug("Cutting paper success");
+    } else {
+        error("Cutting paper ERROR");
+    }
+}
+
+bool MasungPrinterWorker::printBitmap(const QString &filePath)
+{
+    return (MS_SUCCESS == MASUNG_API(PrintDiskbmpfile)(filePath.toUtf8().constData()));
+}
+
+void MasungPrinterWorker::initDevice()
+{
+    log("Init device ......................");
+    int l_iResult = MASUNG_API(SetInit)();
+    if (l_iResult == MS_SUCCESS) {
+        log("Init device success");
+        updateDeviceInfo();
+        updateDeviceStatus();
+        setReady(true);
+    } else {
+        log(QString("Init device ERROR [%1]").arg(l_iResult));
+        setReady(false);
+    }
+}
+
+void MasungPrinterWorker::idleProcess()
+{
+    debug("Idle processing ...");
+    updateDeviceStatus();
+    if (deviceStatus() == ST_offline) {
+        initDevice();
+    }
 }

@@ -1,6 +1,15 @@
 #include "unit.h"
 #include "service/printer/form/xfs_form.h"
 
+Unit::Unit() : Element(Element::KW_UNIT, 3) { }
+
+Unit::Unit(const Unit &other) : Unit{}
+{
+    m_strBase = other.m_strBase;
+    m_iX = other.m_iX;
+    m_iY = other.m_iY;
+}
+
 bool Unit::setBase(const QString &strBase)
 {
     if (BASE.contains(strBase)) {

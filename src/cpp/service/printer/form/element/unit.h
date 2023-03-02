@@ -12,7 +12,8 @@ public:
     inline static QHash<QString, QString> BASE{ { "MM", "mm" }, //
                                                 { "INCH", "inch" }, //
                                                 { "ROWCOLUMN", "rowColumn" } };
-    Unit() : Element(Element::KW_UNIT, 3) { }
+    Unit();
+    Unit(const Unit &other);
 
     inline const QString &base() const { return m_strBase; }
     inline int x() const { return m_iX; }

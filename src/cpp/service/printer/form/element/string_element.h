@@ -7,13 +7,18 @@ namespace xfs_printer {
 class StringElement : public Element
 {
 public:
-    StringElement(const QString &strKeyWord, const QString &strJsonKey = QString{},
-                  QHash<QString, QString> *pValues = nullptr);
-    StringElement(const QString &strKeyWord, QHash<QString, QString> *pValues);
+    explicit StringElement(const QString &strKeyWord, //
+                           const QString &strDefaultValue = QString{}, //
+                           QHash<QString, QString> *pValues = nullptr, //
+                           const QString &strJsonKey = QString{});
 
     virtual bool load(const QString &strPara) override;
     inline const QString &value() const { return m_strValue; }
     inline bool is(const QString &str) const { return (m_strValue == str); }
+
+protected:
+    inline QHash<QString, QString> *defineValues() const { return m_pValues; }
+    inline void setValue(const QString &strValue) { m_strValue = strValue; }
 
 private:
     QString m_strValue;

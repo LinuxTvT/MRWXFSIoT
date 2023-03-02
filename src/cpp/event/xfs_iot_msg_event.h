@@ -11,9 +11,11 @@ class XFSIoTMsgEvent : public XFSIoTEvent
 {
 
 protected:
-    XFSIoTMsgEvent(Type type, uint uiClientId, int iReqeustId, const QString &strCommandName,
+    XFSIoTMsgEvent(Type type, //
+                   uint uiClientId, //
+                   int iReqeustId, //
+                   const QString &strCommandName, //
                    const QJsonObject &joPayload);
-    // XFSIoTMsgEvent(Type type, const XFSIoTMsgEvent *other, const QJsonObject &joPayload);
 
 public:
     virtual ~XFSIoTMsgEvent() { }
@@ -39,18 +41,26 @@ class XFSIoTCommandEvent : public XFSIoTMsgEvent
 
 public:
     enum EStatus { INIT, QUEUED, EXECUTING, CANCELED };
-    XFSIoTCommandEvent(uint uiClientId, int iReqeustId, const QString &strCommandName, const QJsonObject &joPayload);
-    XFSIoTCommandEvent(XFSIoTCommandEvent *pOther);
+    XFSIoTCommandEvent(uint uiClientId, //
+                       int iReqeustId, //
+                       const QString &strCommandName, //
+                       const QJsonObject &joPayload);
+
+    XFSIoTCommandEvent *clone() const;
     virtual ~XFSIoTCommandEvent() { }
+
+    inline const QDateTime &requestTime() const { return m_requestTime; }
 
     void cancel();
     bool isCanceled();
+    bool isTimeOut();
     void setStaus(EStatus eStatus);
     EStatus status();
 
 private:
     EStatus m_eStatus = INIT;
     QMutex m_muxState;
+    QDateTime m_requestTime;
 };
 
 class XFSIoTCompletionEvent : public XFSIoTMsgEvent

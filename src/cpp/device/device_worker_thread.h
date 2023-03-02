@@ -11,15 +11,14 @@ class DeviceWorkerThread : public QThread
 {
     Q_OBJECT
 public:
-    explicit DeviceWorkerThread(DeviceWorker *pWorker); //
+    explicit DeviceWorkerThread(DeviceWorker *pWorker);
+    virtual ~DeviceWorkerThread();
 
-private:
-    // CommandQueue *m_pCommandQueue;
-    DeviceWorker *m_pWorker;
-
-    // QThread interface
 protected:
     virtual void run() override;
+
+private:
+    DeviceWorker *m_pWorker;
 };
 
 #endif // DEVICE_WORKER_THREAD_H

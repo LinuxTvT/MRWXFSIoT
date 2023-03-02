@@ -26,11 +26,11 @@ bool ServiceRepository::load(const QJsonArray &jaServices)
             const QJsonValue l_jvConfigsFile = (*it)["configs"];
             if (l_jvName.isString()) {
                 if (l_jvClass.isString()) {
-                    AbstractService *l_pNewService = createService(l_jvClass.toString(), l_jvConfigsFile.toString());
+                    AbstractService *l_pNewService = createService(l_jvClass.toString(), //
+                                                                   l_jvName.toString(), //
+                                                                   l_jvConfigsFile.toString());
                     if (l_pNewService != nullptr) {
-                        if (l_pNewService->load(l_jvName.toString(), //
-                                                l_jvConfigsFile.toString(), //
-                                                l_jvInterfacesArray.toArray())) {
+                        if (l_pNewService->load(l_jvInterfacesArray.toArray())) {
                             log(QString("Load service [%1] success").arg(l_jvClass.toString()));
                             addService(l_pNewService);
                         } else {
@@ -75,13 +75,15 @@ void ServiceRepository::addService(AbstractService *pService)
     m_hServicesList.insert(pService->name(), pService);
 }
 
-AbstractService *ServiceRepository::createService(const QString &strClassName, const QString &strFileConfig)
+AbstractService *ServiceRepository::createService(const QString &strClassName, //
+                                                  const QString &strName, //
+                                                  const QString &strFileConfig)
 {
     const QMetaObject *l_pMetaObject = m_hMetaObjects.value(strClassName);
     if (l_pMetaObject == nullptr) {
         error(QString("Can't find QMetaObject for class name [%1]").arg(strClassName));
         return nullptr;
     }
-    QObject *l_pObject = l_pMetaObject->newInstance(Q_ARG(QString, strFileConfig));
+    QObject *l_pObject = l_pMetaObject->newInstance(Q_ARG(QString, strName), Q_ARG(QString, strFileConfig));
     return (AbstractService *)l_pObject;
 }

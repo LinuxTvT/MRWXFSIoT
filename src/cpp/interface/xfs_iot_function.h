@@ -19,13 +19,10 @@ public:
 
     inline const QString &name() const { return m_strName; }
 
-    // const XFSIoTInterface *xfsInterface() const;
-
 private:
     char *m_pCharInvokeName = nullptr;
     char *m_pCharMethodSignature = nullptr;
     QString m_strName;
-    // XFSIoTInterface *m_pInterface = nullptr;
 };
 
 #endif // XFSIOTFUNCTION_H

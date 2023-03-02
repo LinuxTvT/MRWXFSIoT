@@ -86,6 +86,7 @@ void DeviceWorkerThreadV3x::run()
     if (m_hWnd == NULL) {
         return;
     } else {
+        m_pWorker->setHWND(m_hWnd);
         HWND_HASH.insert(m_hWnd, m_pWorker);
     }
 

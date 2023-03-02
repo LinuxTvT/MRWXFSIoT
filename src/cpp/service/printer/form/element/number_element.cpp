@@ -2,6 +2,13 @@
 
 using namespace xfs_printer;
 
+NumberElement::NumberElement(const QString &strKeyWord, const QString &strJsonKey)
+    : Element{ strKeyWord, 1, strJsonKey }
+{
+}
+
+NumberElement::~NumberElement() { }
+
 bool NumberElement::load(const QString &strPara)
 {
     Element::load(strPara);

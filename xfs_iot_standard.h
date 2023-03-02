@@ -53,6 +53,12 @@ public:
     inline static const QString JV_COMMAND_ERROR_CODE = QStringLiteral("commandErrorCode");
     inline static const QString JV_CANCELED = QStringLiteral("canceled");
 
+    JsonValue(COMPLETION_CODE, success);
+    JsonValue(COMPLETION_CODE, timeOut);
+    JsonValue(COMPLETION_CODE, deviceNotReady);
+    JsonValue(COMPLETION_CODE, internalError);
+    JsonValue(COMPLETION_CODE, hardwareError);
+
     inline static const QString JV_INTERFACE_NAME_COMMON = QStringLiteral("Common");
 
     //    fields/exampleProperty1/type

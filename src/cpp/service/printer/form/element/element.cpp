@@ -2,12 +2,14 @@
 #include "qglobal.h"
 #include "service/printer/form/xfs_form.h"
 
-Element::Element(const QString &strKeyWord, const QString &strJsonKey, int iNumOfPara)
-    : m_strKeyWord(strKeyWord), m_strJsonKey(strJsonKey), m_iNumOfPara(iNumOfPara)
+Element::Element(const QString &strKeyWord, //
+                 int iNumOfPara, //
+                 const QString &strJsonKey)
+    : m_strKeyWord(strKeyWord), //
+      m_strJsonKey(strJsonKey), //
+      m_iNumOfPara(iNumOfPara)
 {
 }
-
-Element::Element(const QString &strKeyWord, int iNumOfPara) : Element{ strKeyWord, strKeyWord, iNumOfPara } { }
 
 Element::~Element() { }
 

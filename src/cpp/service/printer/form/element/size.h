@@ -2,25 +2,22 @@
 #define SIZE_H
 
 #include "element.h"
+#include "qsize.h"
 
 namespace xfs_printer {
 
 class Size : public Element
 {
 public:
-    Size(bool isDump2Json = true) : Element(Element::KW_SIZE, 2), m_isDump2Json(isDump2Json) { }
-    inline int height() const { return m_iHeight; }
-    inline int width() const { return m_iWidth; }
-    virtual bool load(const QString &strPara) override;
+    Size(bool isDump2Json = true);
+    virtual ~Size();
+    inline const QSize &qSize() const { return m_qSize; }
+    bool load(const QString &strPara) override;
+    virtual bool dump2Json(QJsonObject &jsonObject) override;
 
 private:
-    int m_iHeight = 0;
-    int m_iWidth = 0;
+    QSize m_qSize;
     bool m_isDump2Json;
-
-    // Element interface
-public:
-    virtual bool dump2Json(QJsonObject &jsonObject) override;
 };
 
 }

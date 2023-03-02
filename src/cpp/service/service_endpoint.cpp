@@ -1,22 +1,24 @@
 #include "service_endpoint.h"
 #include "event/xfs_iot_msg_event.h"
-#include "qjsonobject.h"
-#include "service/printer/masung/masung_printer_worker.h"
-#include "service/publisher/publisher_service.h"
-#include "xfs_iot_standard.h"
 #include "qcoreapplication.h"
 #include "qglobal.h"
 #include "qjsondocument.h"
+#include "qjsonobject.h"
 #include "qwebsocket.h"
+#include "service/printer/masung/masung_printer_worker.h"
+#include "service/publisher/publisher_service.h"
+#include "xfs_iot_standard.h"
 #include <QThread>
 
-ServiceEndpoint::ServiceEndpoint(quint16 ui16Port, RunableObject *pParent)
-    : RunableObject("", pParent), m_ui16Port(ui16Port)
+ServiceEndpoint::ServiceEndpoint(quint16 ui16Port, //
+                                 const QString &strName, //
+                                 const QString &strFileConfigs, //
+                                 RunableObject *pParent)
+    : RunableObject(strName, strFileConfigs, pParent), m_ui16Port(ui16Port)
 {
-    this->setName(QString("Endpoint_%1").arg(ui16Port));
-    this->setLogger(MRWLogger::createLogger(this->name()));
-
-    m_pWebSocketServer = new QWebSocketServer(QStringLiteral("Miraway XFSIoT"), QWebSocketServer::NonSecureMode, this);
+    m_pWebSocketServer = new QWebSocketServer(QStringLiteral("Miraway XFSIoT"), //
+                                              QWebSocketServer::NonSecureMode, //
+                                              this);
 }
 
 ServiceEndpoint::~ServiceEndpoint() { }
@@ -28,7 +30,7 @@ QList<QString> ServiceEndpoint::servicesName() const
 
 bool ServiceEndpoint::handleServiceMsg(XFSIoTMsgEvent *pEvent)
 {
-    ClientHandle *l_pClient = this->findClient(pEvent->clientId());
+    ClientHandle *l_pClient = findClient(pEvent->clientId());
     if (l_pClient != nullptr) {
         QJsonObject l_joMessage;
         pEvent->buildJsonMsg(l_joMessage);

@@ -13,8 +13,6 @@ char *stringDup(const QString &str)
 XFSIoTInterface::XFSIoTInterface(const QString &strName) : m_strName(strName), m_strJKName(strName)
 {
     m_strJKName.replace(0, 1, m_strJKName[0].toLower());
-    m_pCharStatusInvokeName = stringDup(QString(UPDATE_STATUS_FUNC_NAME_FORMAT).arg(strName));
-    m_pCharCapabilitiesInvokeName = stringDup(QString(UPDATE_CAPABILITIES_FUNC_NAME_FORMAT).arg(strName));
 }
 
 XFSIoTInterface::~XFSIoTInterface()
@@ -23,8 +21,6 @@ XFSIoTInterface::~XFSIoTInterface()
         delete (*it);
     }
     m_hFunctionsList.clear();
-    delete[] m_pCharStatusInvokeName;
-    delete[] m_pCharCapabilitiesInvokeName;
 }
 
 bool XFSIoTInterface::load(const QJsonArray &jaFunctionsList)
@@ -41,23 +37,6 @@ bool XFSIoTInterface::load(const QJsonArray &jaFunctionsList)
     return true;
 }
 
-bool XFSIoTInterface::invokeUpdateStatus(AbstractService *pService, QJsonObject &joStatus) const
-{
-    // clang-format off
-    bool l_isSuccess = QMetaObject::invokeMethod(pService,
-                                                 m_pCharStatusInvokeName,
-                                                 Qt::DirectConnection,
-                                                 Q_ARG(QJsonObject&, joStatus));
-    // clang-format off
-    if (l_isSuccess) {
-        //debug("Call Update status success");
-        return true;
-    } else {
-        //error(QString("Not support fuction [%1]").arg(QString(m_pCharStatusInvokeName)));
-        return false;
-    }
-}
-
 bool XFSIoTInterface::invokeServiceFunction(const QString &strFunctionName, AbstractService *pService,
                                             XFSIoTCommandEvent *pEvent) const
 {
@@ -71,7 +50,6 @@ bool XFSIoTInterface::invokeServiceFunction(const QString &strFunctionName, Abst
 void XFSIoTInterface::addFunction(XFSIoTFunction *pFunction)
 {
     if (m_hFunctionsList.contains(pFunction->name())) {
-        //warn(QString("Function [%1] ready added").arg(pFunction->name()));
         delete m_hFunctionsList.take(pFunction->name());
     }
     m_hFunctionsList.insert(pFunction->name(), pFunction);

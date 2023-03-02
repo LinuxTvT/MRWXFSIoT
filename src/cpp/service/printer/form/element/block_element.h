@@ -1,9 +1,9 @@
 #ifndef BLOCKELEMENT_H
 #define BLOCKELEMENT_H
 
-#include <QObject>
 #include "element.h"
 #include "service/printer/form/text_line_producer.h"
+#include <QObject>
 
 using namespace xfs_printer;
 
@@ -14,7 +14,7 @@ class BlockElement : public SelfServiceObject
 public:
     explicit BlockElement(const QString &strName, QObject *parent = nullptr);
     virtual ~BlockElement(){};
-    virtual bool load(TextLineProducer &lineProducer) = 0;
+    virtual bool parse(TextLineProducer &lineProducer);
     virtual bool dump2Json(QJsonObject &jsonObject) const;
 
 protected:

@@ -1,13 +1,21 @@
 #include "printer_service.h"
+#include "qjsonobject.h"
 #include "qjsonvalue.h"
 #include "service/printer/form/xfs_field.h"
 #include "service/printer/form/xfs_form.h"
 #include "service/printer/masung/masung_printer_worker.h"
 #include "xfs_iot_standard.h"
 
-PrinterService::PrinterService(const QString &strFileConfig) : AbstractPrinterService{ strFileConfig }
+PrinterService::PrinterService(const QString &strName, //
+                               const QString &strFileConfig)
+    : AbstractPrinterService{ strName, //
+                              strFileConfig }
 {
-    setWorker(new MasungPrinterWorker(QString{}, this));
+}
+
+const XFSForm *PrinterService::form(const QString &strFormName) const
+{
+    return m_pXFSFormRepository->form(strFormName);
 }
 
 bool PrinterService::getPrinterStatus(QJsonObject &joPrinter)
@@ -33,18 +41,21 @@ bool PrinterService::getPaperStatus(QJsonObject &joPaperStatus)
     return true;
 }
 
-void PrinterService::Update_Status_Printer(QJsonObject &joStatus)
-{
-    qDebug() << "joStatus = m_joPrinterStatus";
-}
-
 void PrinterService::Printer_GetFormList(XFSIoTCommandEvent *pEvent)
 {
-    QStringList listDir = QDir(this->m_strFormDir).entryList();
     QJsonObject l_joPayload;
     QJsonArray l_jaForms;
     m_pXFSFormRepository->dumpFormsName2Json(l_jaForms);
     l_joPayload["formList"] = l_jaForms;
+    notifyCompletion(pEvent, l_joPayload);
+}
+
+void PrinterService::Printer_GetMediaList(XFSIoTCommandEvent *pEvent)
+{
+    QJsonObject l_joPayload;
+    QJsonArray l_jaMedias;
+    m_pXFSFormRepository->dumpMediasName2Json(l_jaMedias);
+    l_joPayload["formList"] = l_jaMedias;
     notifyCompletion(pEvent, l_joPayload);
 }
 
@@ -57,7 +68,7 @@ void PrinterService::Printer_GetQueryForm(XFSIoTCommandEvent *pEvent)
     if (l_pForm == nullptr) {
         QString l_strError = QString("Form [%1] can't found").arg(l_strFormName);
         error(l_strError);
-        notifyCompletionError(pEvent, "commandErrorCode", l_strError);
+        notifyCompletionErrorCode(pEvent, "formNotFound", l_strError);
     } else {
         XFSIoTStandard::buildPayloadCompletion(l_joPayload);
         l_pForm->dumpFieldsName2Json(l_jaFields);
@@ -79,9 +90,9 @@ void PrinterService::Printer_GetQueryField(XFSIoTCommandEvent *pEvent)
     } else {
         const XFSField *l_pField = l_pForm->field(l_jvFieldName.toString());
         if (l_pField == nullptr) {
-            QString l_strError = QString("Field [%1] can't found").arg(l_jvFieldName.toString());
-            error(l_strError);
-            notifyCompletionError(pEvent, "commandErrorCode", l_strError);
+            notifyCompletionErrorCode(pEvent, //
+                                      "formInvalid", //
+                                      QString("Field [%1] can't found").arg(l_jvFieldName.toString()));
             return;
         } else {
             QJsonObject l_joField;
@@ -96,13 +107,26 @@ void PrinterService::Printer_GetQueryField(XFSIoTCommandEvent *pEvent)
 void PrinterService::Printer_PrintForm(XFSIoTCommandEvent *pEvent)
 {
     QString l_strFormName = pEvent->payLoad()["formName"].toString();
+    const XFSForm *l_pForm = m_pXFSFormRepository->form(l_strFormName);
 
-    if (m_pXFSFormRepository->form(l_strFormName) == nullptr) {
-        notifyCompletionError(pEvent, "commandErrorCode", QString("Form [%1] can't found").arg(l_strFormName));
+    if (l_pForm == nullptr) {
+        notifyCompletionErrorCode(pEvent, //
+                                  "formNotFound", //
+                                  QString("Form [%1] can't found").arg(l_strFormName));
     } else {
-        deviceWorker()->doCommand(new XFSIoTCommandEvent(pEvent));
-        log(QString("Print From [%1] is queued to device worker").arg(l_strFormName));
+        if (checkForm(l_pForm, pEvent)) {
+            queueCommand(pEvent);
+        } else {
+            notifyCompletionErrorCode(pEvent, //
+                                      "fieldError", //
+                                      QString("Field value error"));
+        }
     }
+}
+
+void PrinterService::Printer_Reset(XFSIoTCommandEvent *pCommandEvent)
+{
+    queueCommand(pCommandEvent);
 }
 
 bool PrinterService::getFromList(QJsonArray &joListFromName)
@@ -111,10 +135,66 @@ bool PrinterService::getFromList(QJsonArray &joListFromName)
     return true;
 }
 
+PrinterWorker *PrinterService::printerWorker()
+{
+    return (PrinterWorker *)deviceWorker();
+}
+
 bool PrinterService::loadFormRepository()
 {
     m_pXFSFormRepository = new XFSFormRepository(this);
-    return m_pXFSFormRepository->loadForms("C:/xfs/Form/RPTR/ReceiptFormEN.wfm");
+    QDir l_formDir{ m_strFormDir };
+    QStringList l_strListFile = l_formDir.entryList({ "*.wfm" }, QDir::Files);
+    for (auto itr = l_strListFile.constBegin(); itr != l_strListFile.constEnd(); itr++) {
+        log(QString("Load forms from file [%1]").arg(*itr));
+        if (m_pXFSFormRepository->loadForms(l_formDir.filePath(*itr))) {
+            log(QString("Load forms from file [%1] success").arg(*itr));
+        } else {
+            error(QString("Load forms from file [%1] ERROR").arg(*itr));
+        }
+    }
+    return true;
+}
+
+// bool PrinterService::checkField(const XFSField *pField, //
+//                                const QJsonObject &joFields, //
+//                                QString *pStrFail)
+//{
+//    if (pField->index().isNull()) {
+//        const QJsonValue &l_jvRefField = joFields[pField->name()];
+//        if (l_jvRefField.isUndefined()) {
+//            if (pField->fieldClass().is("required")) {
+//                *pStrFail = QString{ "required" };
+//                return false;
+//            }
+//        } else {
+//            if (l_jvRefField.isString()) {
+//                if (pField->fieldClass().is("static")) {
+//                    *pStrFail = QString{ "staticOverwrite" };
+//                    return false;
+//                }
+//            } else {
+//                *pStrFail = QString{ "notSupported" };
+//                return false;
+//            }
+//        }
+//    }
+//    return true;
+//}
+
+bool PrinterService::checkForm(const XFSForm *pForm, XFSIoTCommandEvent *pCommandEvent)
+{
+    const QHash<QString, XFSField *> &l_hFields = pForm->fields();
+    QJsonObject l_joFields = pCommandEvent->payLoad()["fields"].toObject();
+
+    for (auto itr = l_hFields.constBegin(); itr != l_hFields.constEnd(); itr++) {
+        QString l_strFail = (*itr)->checkFieldValue(l_joFields);
+        if (!l_strFail.isEmpty()) {
+            notifyFieldErrorEvent(pCommandEvent, (*itr), l_strFail);
+            return false;
+        }
+    }
+    return true;
 }
 
 bool PrinterService::init()
@@ -144,4 +224,21 @@ bool PrinterService::updateStatus()
     }
     m_joPrinterStatus["test"] = "Test";
     return true;
+}
+
+AbstractDeviceWorker *PrinterService::loadDeviceWorker(const QJsonValue &joProperties)
+{
+    return new MasungPrinterWorker(joProperties["configs"].toString(), this);
+}
+
+void PrinterService::Common_Status(XFSIoTCommandEvent *pCommandEvent)
+{
+    if (printerWorker()->isBusy()) {
+        QJsonObject l_joPayload;
+        printerWorker()->commonStatus(l_joPayload);
+        printerWorker()->printerStatus(l_joPayload);
+        notifyCompletion(pCommandEvent, l_joPayload);
+    } else {
+        queueCommand(pCommandEvent);
+    }
 }

@@ -1,4 +1,4 @@
-#include "printer_service_v3x.h"
+#include "service/printer/printer_service_v3x.h"
 #include "XFSAPI.H"
 #include "XFSPTR.H"
 #include "device/v3x/device_worker_v3x.h"
@@ -12,10 +12,10 @@
 #include <QJsonObject>
 #include <winnt.h>
 
-PrinterServiceV3x::PrinterServiceV3x(const QString &strFileConfig) : AbstractPrinterService{ strFileConfig }
+PrinterServiceV3x::PrinterServiceV3x(const QString &strName, //
+                                     const QString &strFileConfig)
+    : AbstractPrinterService{ strName, strFileConfig }
 {
-    m_pDeviceWorkerWrap = new DeviceWorkerV3x(QString{}, this);
-    setWorker(m_pDeviceWorkerWrap);
 }
 
 PrinterServiceV3x::~PrinterServiceV3x() { }
@@ -34,11 +34,6 @@ void PrinterServiceV3x::dumpField(LPWFSFRMFIELD lpWfsFrmField, QJsonObject &jvFi
     }
 }
 
-void PrinterServiceV3x::Update_Status_Printer(QJsonObject &joStatus)
-{
-    qDebug() << "joStatus = m_joPrinterStatus";
-}
-
 void PrinterServiceV3x::Printer_GetFormList(XFSIoTCommandEvent *pCommandEvent)
 {
     DWORD l_dwTimeout = pCommandEvent->payLoad()["timeout"].toInt();
@@ -55,12 +50,14 @@ void PrinterServiceV3x::Printer_GetFormList(XFSIoTCommandEvent *pCommandEvent)
         l_joPayload["formList"] = l_jaForms;
         notifyCompletion(pCommandEvent, l_joPayload);
     } else {
-        notifyCompletionError(pCommandEvent, //
-                              XFSIoTStandard::JV_UNSUPPORTED_COMMAND, //
-                              QString("Do command ERROR  [%1]").arg(pCommandEvent->commandName()));
+        notifyCompletion(pCommandEvent, //
+                         XFSIoTStandard::JV_UNSUPPORTED_COMMAND, //
+                         QString("Do command ERROR  [%1]").arg(pCommandEvent->commandName()));
     }
     WFSFreeResult(l_lpWfsResult);
 }
+
+void PrinterServiceV3x::Printer_GetMediaList(XFSIoTCommandEvent *pCommandEvent) { }
 
 void PrinterServiceV3x::Printer_GetQueryForm(XFSIoTCommandEvent *pCommandEvent)
 {
@@ -79,9 +76,9 @@ void PrinterServiceV3x::Printer_GetQueryForm(XFSIoTCommandEvent *pCommandEvent)
         l_joPayload["formList"] = l_jaForms;
         notifyCompletion(pCommandEvent, l_joPayload);
     } else {
-        notifyCompletionError(pCommandEvent, //
-                              XFSIoTStandard::JV_UNSUPPORTED_COMMAND, //
-                              QString("Do command ERROR  [%1]").arg(pCommandEvent->commandName()));
+        notifyCompletion(pCommandEvent, //
+                         XFSIoTStandard::JV_UNSUPPORTED_COMMAND, //
+                         QString("Do command ERROR  [%1]").arg(pCommandEvent->commandName()));
     }
     WFSFreeResult(l_lpWfsResult);
 }
@@ -116,21 +113,58 @@ void PrinterServiceV3x::Printer_GetQueryField(XFSIoTCommandEvent *pCommandEvent)
         l_joPayload["fields"] = l_joFields;
         notifyCompletion(pCommandEvent, l_joPayload);
     } else {
-        notifyCompletionError(pCommandEvent, //
-                              XFSIoTStandard::JV_UNSUPPORTED_COMMAND, //
-                              QString("Do command ERROR  [%1]").arg(pCommandEvent->commandName()));
+        notifyCompletion(pCommandEvent, //
+                         XFSIoTStandard::JV_UNSUPPORTED_COMMAND, //
+                         QString("Do command ERROR  [%1]").arg(pCommandEvent->commandName()));
     }
     WFSFreeResult(l_lpWfsResult);
 }
 
 void PrinterServiceV3x::Printer_PrintForm(XFSIoTCommandEvent *pEvent)
 {
-    //    QString l_strFormName = pEvent->payLoad()["formName"].toString();
+    WFSPTRPRINTFORM l_wfsPtrPrintForm;
+    REQUESTID l_requestId;
+    wchar_t l_doubleNull[2] = { 0, 0 };
+    char meida[] = "ReceiptMedia";
 
-    //    if (m_pXFSFormRepository->form(l_strFormName) == nullptr) {
-    //        notifyCompletionError(pEvent, "commandErrorCode", QString("Form [%1] can't found").arg(l_strFormName));
-    //    } else {
-    //        this->commandQueue().pushCommand(new XFSIoTCommandEvent(pEvent));
-    //        log(QString("Print From [%1] is queued to device worker").arg(l_strFormName));
-    //    }
+    QString l_strFormName = pEvent->payLoad()["formName"].toString();
+    l_wfsPtrPrintForm.lpszFormName = XfsUtils::stringDup(l_strFormName);
+    l_wfsPtrPrintForm.lpszMediaName = meida;
+    l_wfsPtrPrintForm.wAlignment = WFS_PTR_ALNUSEFORMDEFN;
+    l_wfsPtrPrintForm.wOffsetX = 0;
+    l_wfsPtrPrintForm.wOffsetY = 0;
+    l_wfsPtrPrintForm.wResolution = WFS_PTR_RESLOW;
+    l_wfsPtrPrintForm.dwMediaControl = WFS_PTR_CTRLEJECT;
+    l_wfsPtrPrintForm.lpszUNICODEFields = l_doubleNull;
+    l_wfsPtrPrintForm.wPaperSource = 0;
+    QJsonObject l_joFields = pEvent->payLoad()["fields"].toObject();
+    QByteArray l_baFields;
+    for (auto itr = l_joFields.constBegin(); itr != l_joFields.constEnd(); itr++) {
+        l_baFields.append(itr.key().toUtf8());
+        l_baFields.append('=');
+        l_baFields.append(itr.value().toString().toUtf8());
+        l_baFields.append('\0');
+    }
+    l_baFields.append('\0');
+    l_wfsPtrPrintForm.lpszFields = l_baFields.data();
+    HRESULT l_hResult = m_pDeviceWorkerWrap->wfsAsyncExecute(WFS_CMD_PTR_PRINT_FORM, //
+                                                             &l_wfsPtrPrintForm, //
+                                                             30000, //
+                                                             &l_requestId);
+}
+
+void PrinterServiceV3x::Printer_Reset(XFSIoTCommandEvent *pEvent) { }
+
+AbstractDeviceWorker *PrinterServiceV3x::loadDeviceWorker(const QJsonValue &joProperties)
+{
+    m_pDeviceWorkerWrap = new DeviceWorkerV3x(joProperties["logicalName"].toString(), //
+                                              joProperties["deviceClass"].toString(), //
+                                              joProperties["configs"].toString(), //
+                                              this);
+    return m_pDeviceWorkerWrap;
+}
+
+void PrinterServiceV3x::Common_Status(XFSIoTCommandEvent *pEvent)
+{
+    error(QString("Unimplement command [%1]").arg(pEvent->commandName()));
 }

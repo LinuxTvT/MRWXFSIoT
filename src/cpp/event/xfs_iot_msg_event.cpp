@@ -33,15 +33,6 @@ bool XFSIoTMsgEvent::is(uint uiClientID, const QSet<int> &iRequestIDs)
     }
 }
 
-// XFSIoTMsgEvent::XFSIoTMsgEvent(Type type, const XFSIoTMsgEvent *other, const QJsonObject &joPayload)
-//    : XFSIoTEvent(type),
-//      m_uiClientId(other->clientId()),
-//      m_iReqeustId(other->requestId()),
-//      m_strCommandName(other->commandName()),
-//      m_joPayload(joPayload)
-//{
-//}
-
 const QString &XFSIoTMsgEvent::xfsIotType() const
 {
     if (type() == XFSIoTEvent::CommandEvent) {
@@ -70,7 +61,9 @@ bool XFSIoTMsgEvent::buildJsonMsg(QJsonObject &joBuilder)
     return true;
 }
 
-XFSIoTCommandEvent::XFSIoTCommandEvent(uint uiClientId, int iReqeustId, const QString &strCommandName,
+XFSIoTCommandEvent::XFSIoTCommandEvent(uint uiClientId, //
+                                       int iReqeustId, //
+                                       const QString &strCommandName, //
                                        const QJsonObject &joPayload) //
     : XFSIoTMsgEvent(XFSIoTEvent::CommandEvent,
                      uiClientId, //
@@ -78,14 +71,18 @@ XFSIoTCommandEvent::XFSIoTCommandEvent(uint uiClientId, int iReqeustId, const QS
                      strCommandName, //
                      joPayload)
 {
+    m_requestTime = QDateTime::currentDateTimeUtc();
+    qDebug() << "Create Command Event:" << m_requestTime;
 }
 
-XFSIoTCommandEvent::XFSIoTCommandEvent(XFSIoTCommandEvent *pOther) //
-    : XFSIoTCommandEvent(pOther->clientId(), //
-                         pOther->requestId(), //
-                         pOther->commandName(), //
-                         pOther->payLoad())
+XFSIoTCommandEvent *XFSIoTCommandEvent::clone() const
 {
+    XFSIoTCommandEvent *l_pRet = new XFSIoTCommandEvent(clientId(), //
+                                                        requestId(), //
+                                                        commandName(), //
+                                                        payLoad());
+    l_pRet->m_requestTime = m_requestTime;
+    return l_pRet;
 }
 
 void XFSIoTCommandEvent::cancel()
@@ -96,6 +93,25 @@ void XFSIoTCommandEvent::cancel()
 bool XFSIoTCommandEvent::isCanceled()
 {
     return CANCELED == status();
+}
+
+bool XFSIoTCommandEvent::isTimeOut()
+{
+    int l_iCommandTimeOut = payLoad()["timeout"].toInt();
+    if (l_iCommandTimeOut > 0) {
+        QDateTime l_curTime = QDateTime::currentDateTimeUtc();
+        qDebug() << "Request Time" << m_requestTime;
+        if (m_requestTime.addMSecs(l_iCommandTimeOut) < l_curTime) {
+            qDebug() << "Request Time Add" << m_requestTime.addMSecs(l_iCommandTimeOut);
+            qDebug() << "Current Time" << m_requestTime;
+            qDebug() << "Time out " << l_iCommandTimeOut;
+            return true;
+        } else {
+            return false;
+        }
+    } else {
+        return false;
+    }
 }
 
 void XFSIoTCommandEvent::setStaus(EStatus eStatus)

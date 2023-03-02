@@ -1,6 +1,8 @@
 #include "abstract_printer_service.h"
 
-AbstractPrinterService::AbstractPrinterService(const QString &strFileConfig) : AbstractService{ strFileConfig }
+AbstractPrinterService::AbstractPrinterService(const QString &strName, //
+                                               const QString &strFileConfig)
+    : AbstractService{ strName, strFileConfig }
 { //
 }
 
@@ -59,4 +61,11 @@ void AbstractPrinterService::notifyFieldErrorEvent(XFSIoTCommandEvent *pCommandE
                                                    const QString &strFailure)
 {
     notifyFieldErrorEvent(pCommandEvent, pForm, pField->name(), strFailure);
+}
+
+void AbstractPrinterService::notifyFieldErrorEvent(XFSIoTCommandEvent *pCommandEvent, //
+                                                   const XFSField *pField, //
+                                                   const QString &strFailure)
+{
+    notifyFieldErrorEvent(pCommandEvent, pField->form(), pField, strFailure);
 }

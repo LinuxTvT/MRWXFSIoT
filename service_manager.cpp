@@ -36,10 +36,10 @@ bool ServiceManager::init()
             (PublisherService *)m_pServiceRepository->getService(PublisherService::PUBLISHER_SERVICE_NAME);
 
     if (l_pPublisherService != nullptr) {
-        foreach (ServiceEndpoint *item, m_lEndpointsList) {
-            QList<QString> l_servicesName = item->servicesName();
-            foreach (QString itemServiceName, l_servicesName) {
-                l_pPublisherService->addUriServices(buildServiceUri(item->port(), itemServiceName));
+        for (auto itr = m_lEndpointsList.constBegin(); itr != m_lEndpointsList.constEnd(); itr++) {
+            QList<QString> l_servicesName = (*itr)->servicesName();
+            for (auto itrSN = l_servicesName.constBegin(); itrSN != l_servicesName.constEnd(); itrSN++) {
+                l_pPublisherService->addUriServices(buildServiceUri((*itr)->port(), (*itrSN)));
             }
         }
         return true;
@@ -66,7 +66,7 @@ QString ServiceManager::buildServiceUri(quint16 ui16Port, const QString &strServ
 
 bool ServiceManager::startEndpoint(ServiceEndpoint *pEndpoint)
 {
-    log("Start Endpoint");
+    log("Starts Endpoint");
     pEndpoint->run();
     log("Endpoint started");
 
@@ -76,10 +76,12 @@ bool ServiceManager::startEndpoint(ServiceEndpoint *pEndpoint)
 bool ServiceManager::loadEndpoint(const QJsonArray jaEnpointsList)
 {
     for (auto it = jaEnpointsList.begin(); it != jaEnpointsList.end(); it++) {
-        quint16 l_ui16Port = (*it)[JK_PORT].toInt();
         const QJsonValue &l_jsValService = (*it)[JK_SERVICES];
         if (l_jsValService.isArray()) {
-            ServiceEndpoint *l_pNewEndpoint = new ServiceEndpoint(l_ui16Port, nullptr);
+            ServiceEndpoint *l_pNewEndpoint = new ServiceEndpoint((*it)[JK_PORT].toInt(), //
+                                                                  (*it)["name"].toString(), //
+                                                                  (*it)["configs"].toString(), //
+                                                                  nullptr);
             m_lEndpointsList.append(l_pNewEndpoint);
             const QJsonArray l_jaService = l_jsValService.toArray();
             for (auto itService = l_jaService.begin(); itService != l_jaService.end(); itService++) {

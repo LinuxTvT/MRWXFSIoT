@@ -2,16 +2,11 @@
 
 using namespace xfs_printer;
 
-StringElement::StringElement(const QString &strKeyWord, const QString &strJsonKey, QHash<QString, QString> *pValues)
-    : Element{ strKeyWord, strJsonKey }, m_pValues(pValues)
-{
-    if (pValues != nullptr && pValues->size() > 0) {
-        m_strValue = pValues->constBegin().value();
-    }
-}
-
-StringElement::StringElement(const QString &strKeyWord, QHash<QString, QString> *pValues)
-    : StringElement{ strKeyWord, QString(), pValues }
+StringElement::StringElement(const QString &strKeyWord, //
+                             const QString &strDefaultValue, //
+                             QHash<QString, QString> *pValues, //
+                             const QString &strJsonKey)
+    : Element{ strKeyWord, 1, strJsonKey }, m_strValue(strDefaultValue), m_pValues(pValues)
 {
 }
 
@@ -33,8 +28,8 @@ bool StringElement::load(const QString &strPara)
 
 bool StringElement::dump2Json(QJsonObject &jsonObject)
 {
-    if (!this->jsonKey().isEmpty()) {
-        jsonObject[this->jsonKey()] = this->m_strValue;
+    if (!jsonKey().isEmpty()) {
+        jsonObject[jsonKey()] = this->m_strValue;
     }
     return true;
 }

@@ -1,8 +1,6 @@
 #ifndef _SERVICEENDPOINT_H
 #define _SERVICEENDPOINT_H
 
-#include <QObject>
-#include <QUrl>
 #include "qeventloop.h"
 #include "qglobal.h"
 #include "qjsonvalue.h"
@@ -12,13 +10,18 @@
 #include "service/abstract_service.h"
 #include "service/client_handle.h"
 #include "thread_facotry.h"
+#include <QObject>
+#include <QUrl>
 
 class ServiceEndpoint : public RunableObject
 {
     Q_OBJECT
 
 public:
-    explicit ServiceEndpoint(quint16 ui16Port, RunableObject *pParent);
+    explicit ServiceEndpoint(quint16 ui16Port, //
+                             const QString &strName, //
+                             const QString &strFileConfigs, //
+                             RunableObject *pParent);
     virtual ~ServiceEndpoint();
     inline const QHash<QString, AbstractService *> &servicesList() const { return m_hServicesList; }
     inline quint16 port() const { return m_ui16Port; };

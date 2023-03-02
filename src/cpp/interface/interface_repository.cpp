@@ -1,6 +1,6 @@
 #include "interface/interface_repository.h"
-#include "qjsonvalue.h"
 #include "utils/json_utils.h"
+#include <QJsonValue>
 
 InterfaceRepository::InterfaceRepository(QObject *parent) : SelfServiceObject{ parent } { }
 

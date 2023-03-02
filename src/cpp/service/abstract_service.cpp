@@ -1,4 +1,5 @@
 #include "abstract_service.h"
+#include "device/device_worker.h"
 #include "device/device_worker_thread.h"
 #include "qjsonarray.h"
 #include "qjsonvalue.h"
@@ -10,7 +11,11 @@
 
 InterfaceRepository *AbstractService::s_pInterfaceRepository = nullptr;
 
-AbstractService::AbstractService(const QString &strFileConfig) : RunableObject(strFileConfig, nullptr) { }
+AbstractService::AbstractService(const QString &strName, //
+                                 const QString &strFileConfig)
+    : RunableObject(strName, strFileConfig, nullptr)
+{
+}
 
 AbstractService::~AbstractService() { }
 
@@ -22,29 +27,9 @@ void AbstractService::setInterfaceRepository(InterfaceRepository *pInterfaceRepo
     s_pInterfaceRepository = pInterfaceRepository;
 }
 
-void AbstractService::Common_Status(XFSIoTCommandEvent *pEvent)
-{
-    if (updateStatus()) {
-        QJsonObject l_joPayload;
-        XFSIoTStandard::buildPayloadCompletion(l_joPayload);
-        for (auto itr = m_hInterfacesList.constBegin(); itr != m_hInterfacesList.constEnd(); itr++) {
-            QJsonObject l_joStatus;
-            if ((*itr)->invokeUpdateStatus(this, l_joStatus)) {
-                debug(QString("Invoke update status of interface [%1] success").arg(itr.key()));
-            } else {
-                error(QString("Invoke update status of interface [%1] ERROR").arg(itr.key()));
-            }
-            l_joPayload[(*itr)->jsonKeyName()] = l_joStatus;
-        }
-        notifyCompletion(pEvent, l_joPayload);
-    } else {
-        notifyCompletionError(pEvent, XFSIoTStandard::JV_COMMAND_ERROR_CODE, QStringLiteral("Update status ERROR"));
-    }
-}
-
 void AbstractService::Common_Capabilities(XFSIoTCommandEvent *pEvent)
 {
-    notifyCompletionError(pEvent, XFSIoTStandard::JV_UNSUPPORTED_COMMAND, "Support later");
+    notifyCompletion(pEvent, XFSIoTStandard::JV_UNSUPPORTED_COMMAND, "Support later");
 }
 
 void AbstractService::Common_SetVersions(XFSIoTCommandEvent *pEvent)
@@ -64,23 +49,23 @@ void AbstractService::Common_SetVersions(XFSIoTCommandEvent *pEvent)
                                 .arg(*itr) //
                                 .arg(l_iVersion));
                 } else {
-                    notifyCompletionError(pEvent, //
-                                          XFSIoTStandard::JV_INVALID_DATA, //
-                                          QString("Set command [%1] version ERROR").arg(*itr));
+                    notifyCompletion(pEvent, //
+                                     XFSIoTStandard::JV_INVALID_DATA, //
+                                     QString("Set command [%1] version ERROR").arg(*itr));
                     return;
                 }
             } else {
-                notifyCompletionError(pEvent, //
-                                      XFSIoTStandard::JV_INVALID_DATA, //
-                                      QString("Version of [%1], not a interger").arg(*itr));
+                notifyCompletion(pEvent, //
+                                 XFSIoTStandard::JV_INVALID_DATA, //
+                                 QString("Version of [%1], not a interger").arg(*itr));
                 return;
             }
         }
         notifyCompletion(pEvent, QJsonObject());
     } else {
-        notifyCompletionError(pEvent, //
-                              XFSIoTStandard::JV_INVALID_DATA, //
-                              QString("Can't find client to select version"));
+        notifyCompletion(pEvent, //
+                         XFSIoTStandard::JV_INVALID_DATA, //
+                         QString("Can't find client to select version"));
     }
 }
 
@@ -93,9 +78,9 @@ void AbstractService::Common_Cancel(XFSIoTCommandEvent *pEvent)
         m_pDeviceWorker->cancelCommand(pEvent->clientId());
     } else {
         if (!l_jvRequestIDs.isArray()) {
-            notifyCompletionError(pEvent, //
-                                  XFSIoTStandard::JV_INVALID_DATA, //
-                                  QString("[requestIds] require JSON Array"));
+            notifyCompletion(pEvent, //
+                             XFSIoTStandard::JV_INVALID_DATA, //
+                             QString("[requestIds] require JSON Array"));
             return;
         } else {
             const QJsonArray l_jaRequestIDs = l_jvRequestIDs.toArray();
@@ -104,9 +89,9 @@ void AbstractService::Common_Cancel(XFSIoTCommandEvent *pEvent)
                 if ((*itr).isDouble()) {
                     l_iReqestIDs.insert((*itr).toInt());
                 } else {
-                    notifyCompletionError(pEvent, //
-                                          XFSIoTStandard::JV_INVALID_DATA, //
-                                          QString("[requestIds][x] require JSON number"));
+                    notifyCompletion(pEvent, //
+                                     XFSIoTStandard::JV_INVALID_DATA, //
+                                     QString("[requestIds][x] require JSON number"));
                     return;
                 }
             }
@@ -116,10 +101,8 @@ void AbstractService::Common_Cancel(XFSIoTCommandEvent *pEvent)
     notifyCompletion(pEvent, QJsonObject());
 }
 
-bool AbstractService::load(const QString &strName, const QString &strFileConfig, const QJsonArray &jaInterfacesList)
+bool AbstractService::load(const QJsonArray &jaInterfacesList)
 {
-    setName(strName);
-    m_strFileConfig = strFileConfig;
     for (auto it = jaInterfacesList.begin(); it != jaInterfacesList.end(); it++) {
         if (it->isString()) {
             XFSIoTInterface *l_pInterface = s_pInterfaceRepository->getInterface(it->toString());
@@ -138,17 +121,13 @@ bool AbstractService::load(const QString &strName, const QString &strFileConfig,
     return true;
 }
 
-void AbstractService::setWorker(AbstractDeviceWorker *pDeviceWorker)
-{
-    m_pDeviceWorker = pDeviceWorker;
-    m_pDeviceWorker->setParent(this);
-}
-
 bool AbstractService::init()
 {
     log("Start worker");
-    if (m_pDeviceWorker) {
+    if (m_pDeviceWorker != nullptr) {
         m_pDeviceWorker->run();
+    } else {
+        warn("Worker is NULLL");
     }
     log("Check supported command");
     for (auto itr = m_hInterfacesList.constBegin(); itr != m_hInterfacesList.constEnd(); itr++) {
@@ -198,7 +177,12 @@ void AbstractService::notifyCompletion(const XFSIoTCommandEvent *pEventCmd, cons
 
 void AbstractService::notifyCanceled(const XFSIoTCommandEvent *pEventCmd) const
 {
-    notifyCompletionError(pEventCmd, XFSIoTStandard::JV_CANCELED);
+    notifyCompletion(pEventCmd, XFSIoTStandard::JV_CANCELED);
+}
+
+void AbstractService::notifyTimeOut(const XFSIoTCommandEvent *pEventCmd) const
+{
+    notifyCompletion(pEventCmd, XFSIoTStandard::JV_COMPLETION_CODE_timeOut);
 }
 
 void AbstractService::notifyEventEvent(const XFSIoTCommandEvent *pEventCmd, //
@@ -214,26 +198,48 @@ bool AbstractService::updateStatus()
     return true;
 }
 
+void AbstractService::queueCommand(const XFSIoTCommandEvent *pEventCmd) const
+{
+    DeviceWorker *l_pWorker = qobject_cast<DeviceWorker *>(m_pDeviceWorker);
+    if (l_pWorker != nullptr) {
+        l_pWorker->queueCommand(pEventCmd);
+    } else {
+        error("Device Worker not XFSIoT Worker");
+    }
+}
+
 bool AbstractService::isSupportInterface(const QString &strInterfaceName) const
 {
     return m_hInterfacesList.contains(strInterfaceName);
 }
 
-void AbstractService::notifyCompletionError(const XFSIoTCommandEvent *pEventCmd, const QString &strCompletionCode,
-                                            const QString &strErrorDescription) const
+void AbstractService::notifyCompletion(const XFSIoTCommandEvent *pEventCmd, //
+                                       const QString &strCompletionCode, //
+                                       const QString &strErrorDescription) const
 {
     QJsonObject l_joPayload;
-    XFSIoTStandard::buildPayloadCompletion(l_joPayload, strCompletionCode, strErrorDescription);
+    XFSIoTStandard::buildPayloadCompletion(l_joPayload, //
+                                           strCompletionCode, //
+                                           strErrorDescription);
     if (!strErrorDescription.isEmpty()) {
         error(strErrorDescription);
     }
     notifyEvent(new XFSIoTCompletionEvent(pEventCmd, l_joPayload));
 }
 
+void AbstractService::notifyCompletionErrorCode(const XFSIoTCommandEvent *pEventCmd, //
+                                                const QString &strErrorCode, //
+                                                const QString &strErrorDescription) const
+{
+    QJsonObject l_joPayload;
+    l_joPayload["errorCode"] = strErrorCode;
+    notifyCompletion(pEventCmd, XFSIoTStandard::JV_COMMAND_ERROR_CODE, strErrorDescription);
+}
+
 void AbstractService::notifyInvalidCommand(const XFSIoTCommandEvent *pEventCmd,
                                            const QString &strErrorDescription) const
 {
-    notifyCompletionError(pEventCmd, XFSIoTStandard::JV_INVALID_COMMAND, strErrorDescription);
+    notifyCompletion(pEventCmd, XFSIoTStandard::JV_INVALID_COMMAND, strErrorDescription);
 }
 
 bool AbstractService::onCommand(XFSIoTCommandEvent *pEvent)
@@ -297,22 +303,22 @@ bool AbstractService::loadConfig(const QJsonObject &config)
         if (l_jvPayloadItems.isObject()) {
             m_joPayloadItems = l_jvPayloadItems.toObject();
             m_joStatusCommon = m_joPayloadItems["Status.common"].toObject();
-            return true;
         } else {
             error("payloadDefault require a Objects");
+            return false;
+        }
+        m_pDeviceWorker = loadDeviceWorker(config["deviceWorker"]);
+        if (m_pDeviceWorker == nullptr) {
+            error("Load device worker ERROR");
             return false;
         }
     } else {
         return false;
     }
+    return true;
 }
 
 const QJsonValue AbstractService::payloadItem(const QString &strName) const
 {
     return m_joPayloadItems[strName];
-}
-
-void AbstractService::Update_Status_Common(QJsonObject &joStatus)
-{
-    m_pDeviceWorker->commonStatus(joStatus);
 }

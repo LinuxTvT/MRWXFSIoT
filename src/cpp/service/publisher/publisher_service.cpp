@@ -26,3 +26,13 @@ void PublisherService::buildJsonServices(QJsonArray &jsArray) const
         jsArray.append(l_jsObject);
     }
 }
+
+AbstractDeviceWorker *PublisherService::loadDeviceWorker(const QJsonValue &joProperties)
+{
+    return nullptr;
+}
+
+void PublisherService::Common_Status(XFSIoTCommandEvent *pEvent)
+{
+    error(QString("Unimplement command [%1]").arg(pEvent->commandName()));
+}

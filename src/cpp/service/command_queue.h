@@ -10,10 +10,10 @@ class CommandQueue
 public:
     CommandQueue();
 
-    bool pushCommand(XFSIoTCommandEvent *pCommandEvent);
+    bool enqueueCommand(XFSIoTCommandEvent *pCommandEvent);
     bool cancelCommand(uint uiClientID, int iRequestID = -1);
     // bool cancelCommand(uint uiClientID, const QSet<int> &iSetRequestIds);
-    XFSIoTCommandEvent *executeCommand();
+    XFSIoTCommandEvent *dequeueCommand(int iWaitTimeout);
     void completedExecute();
 
 private:

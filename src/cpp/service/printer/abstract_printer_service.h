@@ -9,14 +9,17 @@ class AbstractPrinterService : public AbstractService
 {
     Q_OBJECT
 public:
-    explicit AbstractPrinterService(const QString &strFileConfig);
+    explicit AbstractPrinterService(const QString &strName, //
+                                    const QString &strFileConfig);
     virtual ~AbstractPrinterService();
 
-    virtual STATUS_FUNCTION(Printer) = 0;
+    // virtual STATUS_FUNCTION(Printer) = 0;
     virtual SERVICE_FUNCTION(Printer, GetFormList) = 0;
+    virtual SERVICE_FUNCTION(Printer, GetMediaList) = 0;
     virtual SERVICE_FUNCTION(Printer, GetQueryForm) = 0;
     virtual SERVICE_FUNCTION(Printer, GetQueryField) = 0;
     virtual SERVICE_FUNCTION(Printer, PrintForm) = 0;
+    virtual SERVICE_FUNCTION(Printer, Reset) = 0;
 
 public:
     void notifyFieldEvent(XFSIoTCommandEvent *pCommandEvent, //
@@ -37,6 +40,10 @@ public:
                                const XFSForm *pForm, //
                                const XFSField *pField, //
                                const QString &strFailure);
+    void notifyFieldErrorEvent(XFSIoTCommandEvent *pCommandEvent, //
+                               const XFSField *pField, //
+                               const QString &strFailure);
+
     void notifyFieldErrorEvent(XFSIoTCommandEvent *pCommandEvent, //
                                const XFSForm *pForm, //
                                const QString &strFieldName, //

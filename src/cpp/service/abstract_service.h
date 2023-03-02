@@ -27,12 +27,11 @@ private:
     static InterfaceRepository *s_pInterfaceRepository;
 
 public:
-    explicit AbstractService(const QString &strFileConfig);
+    explicit AbstractService(const QString &strName, const QString &strFileConfig);
     virtual ~AbstractService();
-    bool load(const QString &strName, const QString &strFileConfig, const QJsonArray &jaInterfacesList);
+    bool load(const QJsonArray &jaInterfacesList);
     inline void setEndpoint(ServiceEndpoint *pEndpoint) { m_pEndpoint = pEndpoint; }
     inline AbstractDeviceWorker *deviceWorker() { return m_pDeviceWorker; }
-    void setWorker(AbstractDeviceWorker *pDeviceWorker);
     void addInterface(XFSIoTInterface *pInterface);
     bool isSupportInterface(const QString &strInterfaceName) const;
 
@@ -44,10 +43,7 @@ public:
     const QJsonValue payloadItem(const QString &strName) const;
     using SelfServiceObject::loadConfig;
 
-    // XFSIoT Implement
-    STATUS_FUNCTION(Common);
-
-    SERVICE_FUNCTION(Common, Status);
+    virtual SERVICE_FUNCTION(Common, Status) = 0;
     SERVICE_FUNCTION(Common, Capabilities);
     SERVICE_FUNCTION(Common, SetVersions);
     SERVICE_FUNCTION(Common, Cancel);
@@ -57,17 +53,20 @@ public:
     bool onClientConnected(int iClientID);
     bool onClientDisconnected(int iClientID);
 
-    // inline CommandQueue &commandQueue() { return m_oCommandQueue; }
-
     // Notify completed message to client
 public:
     void notifyEvent(XFSIoTMsgEvent *event) const;
-    void notifyCompletionError(const XFSIoTCommandEvent *pEventCmd, // Event of command
-                               const QString &strCompletionCode, //
-                               const QString &strErrorDescription = QString()) const;
-    void notifyInvalidCommand(const XFSIoTCommandEvent *pEventCmd, const QString &strErrorDescription) const;
+    void notifyCompletion(const XFSIoTCommandEvent *pEventCmd, // Event of command
+                          const QString &strCompletionCode, //
+                          const QString &strErrorDescription = QString()) const;
+    void notifyCompletionErrorCode(const XFSIoTCommandEvent *pEventCmd, // Event of command
+                                   const QString &strErrorCode, //
+                                   const QString &strErrorDescription = QString()) const;
+    void notifyInvalidCommand(const XFSIoTCommandEvent *pEventCmd, //
+                              const QString &strErrorDescription) const;
     void notifyCompletion(const XFSIoTCommandEvent *pEventCmd, const QJsonObject &joPayload) const;
     void notifyCanceled(const XFSIoTCommandEvent *pEventCmd) const;
+    void notifyTimeOut(const XFSIoTCommandEvent *pEventCmd) const;
 
     // Event message
     void notifyEventEvent(const XFSIoTCommandEvent *pEventCmd, //
@@ -80,6 +79,10 @@ protected:
 
     virtual bool updateStatus();
     inline QJsonObject &commonStatus() { return m_joStatusCommon; }
+
+    virtual AbstractDeviceWorker *loadDeviceWorker(const QJsonValue &joProperties) = 0;
+
+    void queueCommand(const XFSIoTCommandEvent *pEventCmd) const;
 
 private:
     ServiceEndpoint *m_pEndpoint = nullptr;

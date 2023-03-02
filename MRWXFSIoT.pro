@@ -1,4 +1,4 @@
-QT -= gui
+#QT -= gui
 QT += websockets
 
 CONFIG += c++17 console
@@ -43,12 +43,16 @@ SOURCES += \
         src/cpp/service/command_queue.cpp \
         src/cpp/service/cardreader/cardreader_service.cpp \
         src/cpp/service/printer/abstract_printer_service.cpp \
+        src/cpp/service/printer/bmp_printer.cpp \
         src/cpp/service/printer/form/element/alignment.cpp \
+        src/cpp/service/printer/form/element/area.cpp \
         src/cpp/service/printer/form/element/block_element.cpp \
         src/cpp/service/printer/form/element/element.cpp \
+        src/cpp/service/printer/form/element/index.cpp \
         src/cpp/service/printer/form/element/number_element.cpp \
         src/cpp/service/printer/form/element/position.cpp \
         src/cpp/service/printer/form/element/size.cpp \
+        src/cpp/service/printer/form/element/string_combination_element.cpp \
         src/cpp/service/printer/form/element/string_element.cpp \
         src/cpp/service/printer/form/element/unit.cpp \
         src/cpp/service/printer/form/element/version.cpp \
@@ -56,14 +60,15 @@ SOURCES += \
         src/cpp/service/printer/form/xfs_field.cpp \
         src/cpp/service/printer/form/xfs_form.cpp \
         src/cpp/service/printer/form/xfs_form_repository.cpp \
+        src/cpp/service/printer/form/xfs_frame.cpp \
+        src/cpp/service/printer/form/xfs_media.cpp \
         src/cpp/service/printer/masung/masung_printer_worker.cpp \
         src/cpp/service/printer/printer_service.cpp \
         src/cpp/service/printer/printer_service_v3x.cpp \
+        src/cpp/service/printer/printer_worker.cpp \
         src/cpp/service/publisher/publisher_service.cpp \
         src/cpp/service/service_endpoint.cpp \
         src/cpp/service/service_repository.cpp \
-        src/cpp/service/v3x/v3x_service.cpp \
-        src/cpp/service/xfs_iot/xfs_iot_service.cpp \
         xfs_iot_standard.cpp
 
 # Default rules for deployment.
@@ -91,12 +96,16 @@ HEADERS += \
     src/cpp/service/command_queue.h \
     src/cpp/service/cardreader/cardreader_service.h \
     src/cpp/service/printer/abstract_printer_service.h \
+    src/cpp/service/printer/bmp_printer.h \
     src/cpp/service/printer/form/element/alignment.h \
+    src/cpp/service/printer/form/element/area.h \
     src/cpp/service/printer/form/element/block_element.h \
     src/cpp/service/printer/form/element/element.h \
+    src/cpp/service/printer/form/element/index.h \
     src/cpp/service/printer/form/element/number_element.h \
     src/cpp/service/printer/form/element/position.h \
     src/cpp/service/printer/form/element/size.h \
+    src/cpp/service/printer/form/element/string_combination_element.h \
     src/cpp/service/printer/form/element/string_element.h \
     src/cpp/service/printer/form/element/unit.h \
     src/cpp/service/printer/form/element/version.h \
@@ -104,14 +113,16 @@ HEADERS += \
     src/cpp/service/printer/form/xfs_field.h \
     src/cpp/service/printer/form/xfs_form.h \
     src/cpp/service/printer/form/xfs_form_repository.h \
+    src/cpp/service/printer/form/xfs_frame.h \
+    src/cpp/service/printer/form/xfs_media.h \
+    src/cpp/service/printer/masung/masung_printer_simulator.h \
     src/cpp/service/printer/masung/masung_printer_worker.h \
     src/cpp/service/printer/masung/sdk/Msprintsdk.h \
     src/cpp/service/printer/masung/sdk/Msqrcode.h \
     src/cpp/service/printer/printer_service.h \
     src/cpp/service/printer/printer_service_v3x.h \
+    src/cpp/service/printer/printer_worker.h \
     src/cpp/service/publisher/publisher_service.h \
     src/cpp/service/service_endpoint.h \
     src/cpp/service/service_repository.h \
-    src/cpp/service/v3x/v3x_service.h \
-    src/cpp/service/xfs_iot/xfs_iot_service.h \
     xfs_iot_standard.h

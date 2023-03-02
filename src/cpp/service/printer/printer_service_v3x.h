@@ -10,7 +10,6 @@
 #include "service/printer/form/xfs_field.h"
 #include "service/printer/form/xfs_form.h"
 #include "service/printer/form/xfs_form_repository.h"
-#include "service/xfs_iot/xfs_iot_service.h"
 #include "xfs_iot_standard.h"
 #include <QObject>
 
@@ -51,18 +50,27 @@ public:
     };
 
 public:
-    Q_INVOKABLE explicit PrinterServiceV3x(const QString &strFileConfig);
+    Q_INVOKABLE explicit PrinterServiceV3x(const QString &strName, //
+                                           const QString &strFileConfig);
     virtual ~PrinterServiceV3x();
 
-    STATUS_FUNCTION(Printer);
-    SERVICE_FUNCTION(Printer, GetFormList);
-    SERVICE_FUNCTION(Printer, GetQueryForm);
-    SERVICE_FUNCTION(Printer, GetQueryField);
-    SERVICE_FUNCTION(Printer, PrintForm);
+    SERVICE_FUNCTION(Common, Status) override;
+
+    // STATUS_FUNCTION(Printer) override;
+    SERVICE_FUNCTION(Printer, GetFormList) override;
+    SERVICE_FUNCTION(Printer, GetMediaList) override;
+    SERVICE_FUNCTION(Printer, GetQueryForm) override;
+    SERVICE_FUNCTION(Printer, GetQueryField) override;
+    SERVICE_FUNCTION(Printer, PrintForm) override;
+    SERVICE_FUNCTION(Printer, Reset) override;
 
 private:
     DeviceWorkerV3x *m_pDeviceWorkerWrap;
     void dumpField(LPWFSFRMFIELD lpWfsFrmField, QJsonObject &jvFields);
+
+    // AbstractService interface
+protected:
+    virtual AbstractDeviceWorker *loadDeviceWorker(const QJsonValue &joProperties) override;
 };
 
 #endif // PRINTERSERVICEV3X_H
