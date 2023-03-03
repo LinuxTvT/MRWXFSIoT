@@ -1,8 +1,6 @@
 #ifndef XFSFIELD_H
 #define XFSFIELD_H
 
-#include "qjsonobject.h"
-#include "qjsonvalue.h"
 #include "qnamespace.h"
 #include "selfservice_object.h"
 #include "service/printer/form/element/block_element.h"
@@ -14,6 +12,8 @@
 #include "service/printer/form/element/string_element.h"
 #include "service/printer/form/text_line_producer.h"
 #include "service/printer/form/xfs_frame.h"
+#include <QJsonObject>
+#include <QJsonValue>
 #include <QObject>
 #include <QRect>
 
@@ -73,23 +73,45 @@ public:
     inline static QHash<QString, QString> SCALING{ { "BESTFIT", "bestfit" }, //
                                                    { "ASIS", "asis" }, //
                                                    { "MAINTAINASPECT", "maintainAspect" } };
-
+    //    fields/exampleProperty1/class
+    //            Specifies the class of the field as one of the following:
+    //• static - The field data cannot be set by the application.
+    //• optional - The field data can be set by the application.
+    //• required - The field data must be set by the application.
     inline static QHash<QString, QString> CLASS{ { "OPTIONAL", "optional" }, //
                                                  { "STATIC", "static" }, //
                                                  { "REQUIRED", "required" },
                                                  { "TIME", "time" } };
 
+    // fields/exampleProperty1/access
+    // Specifies the field access as one of the following:
+    //• read - The field is used for input.
+    //• write - The field is used for output.
+    //• readWrite - The field is used for both input and output.
     inline static QHash<QString, QString> ACCESS{ { "WRITE", "write" }, //
                                                   { "READ", "read" }, //
                                                   { "READWRITE", "readWrite" } };
 
-    inline static QHash<QString, QString> STYPE{ { "OPTIONAL", "optional" }, //
-                                                 { "STATIC", "static" }, //
-                                                 { "REQUIRED", "required" } };
-
+public:
     explicit XFSField(const QString &strName, XFSForm *parent);
-    virtual ~XFSField(){};
+    virtual ~XFSField();
 
+    inline const Position &position() const { return m_oPosition; }
+    inline const StringElement &follows() const { return m_strFollows; }
+    inline const Size &size() const { return m_oSize; }
+    inline const Index &index() const { return m_oIndex; }
+    inline bool isIndexField() const { return (m_oIndex.repeadCount() > 0); }
+    inline const StringElement &type() const { return m_strType; }
+    inline const StringElement &fieldClass() const { return m_strClass; }
+    inline const StringElement &overflow() const { return m_strOverflow; }
+    inline const StringCombinationElement &style() const { return m_strStyle; }
+    inline int qtHorizontalAlign() const { return HORIZONTAL_QT.value(m_strHorizontal.value(), Qt::AlignLeft); }
+    inline const NumberElement &pointSize() const { return m_iPointSize; }
+    inline const QString &initialvalue() const { return m_strInitialvalue.value(); }
+
+    inline const XFSForm *form() const { return m_pForm; }
+    inline const XFSField *nextFollows() const { return m_pNextFollows; }
+    inline const XFSField *previousFollows() const { return m_pPreviousFollows; }
     inline const QRegularExpression &fieldNameRegularExpression() const { return m_regxIndexFieldNameFilter; };
 
     QString checkFieldValue(const QJsonValue jvValue) const;
@@ -97,64 +119,68 @@ public:
     QString printValue(const QJsonObject joFieldsPayload) const;
     int printValuesList(const QJsonObject joFieldsPayload, QMap<int, QString> &valuesList) const;
 
-    inline const Position &position() const { return m_oPosition; }
-    inline const Size &size() const { return m_oSize; }
-    inline const Index &index() const { return m_oIndex; }
-    inline bool isIndexField() const { return (m_oIndex.repeadCount() > 0); }
-    inline const StringElement &overflow() const { return m_strOverflow; }
-    inline const QString &initialvalue() const { return m_strInitialvalue.value(); }
-    inline const StringElement &fieldClass() const { return m_strClass; }
-    inline const StringElement &type() const { return m_strType; }
-    inline const NumberElement &pointSize() const { return m_iPointSize; }
-    inline const StringCombinationElement &style() const { return m_strStyle; }
-    inline QStringList listStyles() const { return m_strStyle.value().split('|'); }
-    inline const StringElement &follows() const { return m_strFollows; }
-    inline int qtHAlign() const { return HORIZONTAL_QT.value(m_strHorizontal.value(), Qt::AlignLeft); }
     void setFrame(XFSFrame *pFrame);
     void setTileOfFrame(XFSFrame *pFrame);
-    void setFieldFollows(XFSField *pField);
-    const XFSField *nextFollows() const { return m_pNextFollows; }
-    const XFSField *previousFollows() const { return m_pPreviousFollows; }
 
     inline QRect rect() const { return QRect{ m_oPosition.qPoint(), m_oSize.qSize() }; }
-    inline QRect rect(int idx) const { return rect().translated(idx * m_oIndex.xOffset(), idx * m_oIndex.yOffset()); }
-    inline const XFSForm *form() const { return m_pForm; }
+
+    bool rebuild();
 
 private:
-    Position m_oPosition;
-    StringElement m_strFollows{ Element::KW_FOLLOWS };
-    StringElement m_strOverflow{ Element::KW_OVERFLOW, "terminate", &OVERFLOW, "overflow" };
-    // STYLE
-    StringCombinationElement m_strStyle{ Element::KW_STYLE };
+    void setFieldFollows(XFSField *pField);
 
-    StringElement m_strVertical{ Element::KW_VERTICAL, "bottom", &VERTICAL };
-    StringElement m_strHorizontal{ Element::KW_HORIZONTAL, "left", &HORIZONTAL };
-    StringElement m_strInitialvalue{ Element::KW_INITIALVALUE, QString{}, nullptr, "initialValue" };
+private:
+    // POSITION
+    Position m_oPosition;
+    // FOLLOWS
+    StringElement m_strFollows{ Element::KW_FOLLOWS };
+    // HEADER
+    // FOOTER
+    // HEADER
+    // SIZE
+    Size m_oSize{ false };
+    // INDEX
+    Index m_oIndex;
+    // TYPE
+    StringElement m_strType{ Element::KW_TYPE, "text", &TYPE, "type" };
+    // SCALING
+    StringElement m_strScaling{ Element::KW_SCALING, "bestfit", &SCALING };
+    // BARCODE
+    // COERCIVITY
+    // CLASS
     StringElement m_strClass{ Element::KW_CLASS, "optional", &CLASS, "class" };
     // ACCESS
     StringElement m_strAccess{ Element::KW_ACCESS, "write", &ACCESS, "access" };
-
-    // HEADER
-    // FOOTER
-    // SIDE
-    Size m_oSize{ false };
-
-    // INDEX
-    Index m_oIndex;
-    StringElement m_strType{ Element::KW_TYPE, "text", &TYPE, "type" };
-    StringElement m_strScaling{ Element::KW_SCALING, "bestfit", &SCALING };
+    // OVERFLOW
+    StringElement m_strOverflow{ Element::KW_OVERFLOW, "terminate", &OVERFLOW, "overflow" };
+    // STYLE
+    StringCombinationElement m_strStyle{ Element::KW_STYLE };
+    // CASE
+    // HORIZONTAL
+    StringElement m_strHorizontal{ Element::KW_HORIZONTAL, "left", &HORIZONTAL };
+    // VERTICAL
+    StringElement m_strVertical{ Element::KW_VERTICAL, "bottom", &VERTICAL };
+    // COLOR
+    // RGBCOLOR
+    // FONT
     StringElement m_strFont{ Element::KW_FONT };
+    // POINTSIZE
     NumberElement m_iPointSize{ Element::KW_POINTSIZE };
     // CPI
     NumberElement m_iCPI{ Element::KW_CPI };
     // LPI
     NumberElement m_iLPI{ Element::KW_LPI };
+    // FORMAT
+    // INITIALVALUE
+    StringElement m_strInitialvalue{ Element::KW_INITIALVALUE, QString{}, nullptr, "initialValue" };
 
+    // Link to other fields or frames
     XFSForm *m_pForm = nullptr;
     XFSFrame *m_pFrame = nullptr;
     XFSFrame *m_pTitleOfFrame = nullptr;
     XFSField *m_pNextFollows = nullptr;
     XFSField *m_pPreviousFollows = nullptr;
+    // Reqular Expression for match name and index of field indexed (format: <field_name>[<index>]
     QRegularExpression m_regxIndexFieldNameFilter;
 };
 

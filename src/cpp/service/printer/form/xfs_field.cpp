@@ -1,6 +1,6 @@
 #include "xfs_field.h"
-#include "qjsonvalue.h"
 #include "service/printer/form/xfs_form.h"
+#include <QJsonValue>
 
 XFSField::XFSField(const QString &strName, XFSForm *parent) : BlockElement{ strName, parent }, m_pForm(parent)
 {
@@ -26,10 +26,7 @@ XFSField::XFSField(const QString &strName, XFSForm *parent) : BlockElement{ strN
     m_regxIndexFieldNameFilter.setPattern(QString(REGX_FIELD_INDEX_KEY_FORMAT).arg(name()));
 }
 
-// QRegularExpression XFSField::fieldNameRegularExpression() const
-//{
-//    return QRegularExpression{ QString(REGX_FIELD_INDEX_KEY_FORMAT).arg(name()) };
-//}
+XFSField::~XFSField() { }
 
 QString XFSField::checkFieldValue(const QJsonValue jvValue) const
 {
@@ -121,4 +118,23 @@ void XFSField::setFieldFollows(XFSField *pField)
 {
     m_pPreviousFollows = pField;
     pField->m_pNextFollows = this;
+}
+
+bool XFSField::rebuild()
+{
+    if (m_pForm == nullptr) {
+        error(QString("Field [%1] form parrent is null").arg(name()));
+        return false;
+    } else {
+        if (!m_strFollows.isEmpty()) {
+            XFSField *l_pFollowsField = m_pForm->field(m_strFollows.value());
+            if (l_pFollowsField != nullptr) {
+                setFieldFollows(l_pFollowsField);
+            } else {
+                error(QString("Field [%1] can not find follows field [%1]").arg(name(), m_strFollows.value()));
+                return false;
+            }
+        }
+    }
+    return true;
 }
