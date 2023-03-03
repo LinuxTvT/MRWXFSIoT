@@ -1,14 +1,15 @@
 #ifndef TEXTLINEPRODUCER_H
 #define TEXTLINEPRODUCER_H
 
-#include <QObject>
 #include "selfservice_object.h"
+#include <QObject>
 
 class TextLineProducer : public SelfServiceObject
 {
     Q_OBJECT
+
 public:
-    explicit TextLineProducer(QTextStream *pStream) : SelfServiceObject(), m_pStream(pStream) { }
+    explicit TextLineProducer(QTextStream *pStream);
     virtual QString &nextLine();
     inline QString &currentLine() { return m_strCurLine; }
 

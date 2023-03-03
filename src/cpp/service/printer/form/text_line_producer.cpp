@@ -1,6 +1,11 @@
 #include "text_line_producer.h"
 #include "service/printer/form/xfs_form.h"
 
+TextLineProducer::TextLineProducer(QTextStream *pStream) //
+    : SelfServiceObject(), m_pStream(pStream)
+{
+}
+
 QString &TextLineProducer::nextLine()
 {
     if (m_pStream->atEnd()) {

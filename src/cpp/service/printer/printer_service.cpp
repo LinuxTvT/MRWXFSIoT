@@ -156,32 +156,6 @@ bool PrinterService::loadFormRepository()
     return true;
 }
 
-// bool PrinterService::checkField(const XFSField *pField, //
-//                                const QJsonObject &joFields, //
-//                                QString *pStrFail)
-//{
-//    if (pField->index().isNull()) {
-//        const QJsonValue &l_jvRefField = joFields[pField->name()];
-//        if (l_jvRefField.isUndefined()) {
-//            if (pField->fieldClass().is("required")) {
-//                *pStrFail = QString{ "required" };
-//                return false;
-//            }
-//        } else {
-//            if (l_jvRefField.isString()) {
-//                if (pField->fieldClass().is("static")) {
-//                    *pStrFail = QString{ "staticOverwrite" };
-//                    return false;
-//                }
-//            } else {
-//                *pStrFail = QString{ "notSupported" };
-//                return false;
-//            }
-//        }
-//    }
-//    return true;
-//}
-
 bool PrinterService::checkForm(const XFSForm *pForm, XFSIoTCommandEvent *pCommandEvent)
 {
     const QHash<QString, XFSField *> &l_hFields = pForm->fields();

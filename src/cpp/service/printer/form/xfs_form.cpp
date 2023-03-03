@@ -147,8 +147,7 @@ bool XFSForm::addField(XFSField *pNewField)
     if (m_fieldsMapByPosition.contains(pNewField->position())) {
         const XFSField *l_pField = m_fieldsMapByPosition.value(pNewField->position());
         error(QString("Form [%1] have field [%2] and field [%3] same position") //
-                      .arg(name(), pNewField->name()) //
-                      .arg(l_pField->name()));
+                      .arg(name(), pNewField->name(), l_pField->name()));
         return false;
     } else {
         m_fieldsMapByPosition.insert(pNewField->position(), pNewField);
