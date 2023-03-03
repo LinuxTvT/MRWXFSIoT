@@ -127,7 +127,6 @@ bool MasungPrinterWorker::goTo(int iX, int iY)
 
 bool MasungPrinterWorker::feedLine(int iLines)
 {
-    // return (0 == MASUNG_API(PrintChangeRow)());
     return (0 == MASUNG_API(PrintFeedline)(iLines));
 }
 
@@ -180,6 +179,9 @@ void MasungPrinterWorker::doPrintForm(XFSIoTCommandEvent *pCommandEvent)
     // feedLine(3);
 
     // cutPaper();
+    service()->notifyCompletion(pCommandEvent, //
+                                XFSIoTStandard::JV_COMPLETION_CODE_success, //
+                                DEVICE_STATUS_MAP_STR.value(m_iHardwareStatus));
 }
 
 void MasungPrinterWorker::doCommonStatus(XFSIoTCommandEvent *pCommandEvent)

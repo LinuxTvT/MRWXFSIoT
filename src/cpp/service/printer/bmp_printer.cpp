@@ -95,7 +95,7 @@ void BMPPrinter::printField(const XFSField *pField, const QRect &rect, const QSt
             l_fieldFont.setBold(true);
         }
         m_pPainter->setFont(l_fieldFont);
-        m_pPainter->drawText(toPixel(rect), pField->qtHAlign(), value);
+        m_pPainter->drawText(toPixel(rect), pField->qtHorizontalAlign(), value);
         m_pPainter->setFont(l_curFont);
     } else if (pField->type().is("graphic")) {
         QImage l_imageField = QImage{ value };
