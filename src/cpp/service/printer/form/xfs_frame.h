@@ -8,6 +8,7 @@
 #include <QObject>
 
 class XFSForm;
+class XFSField;
 
 class XFSFrame : public BlockElement
 {
@@ -38,17 +39,46 @@ public:
 
     inline const Position &position() const { return m_oPosition; }
     inline const Size &size() const { return m_oSize; }
-    inline const QString &fieldName() const { return m_strFrames.value(); }
-    inline const QString &tileFieldName() const { return m_strTile.value(); }
+
+    bool rebuild();
 
 private:
+    void setContentField(XFSField *pContentField);
+    void setTitleField(XFSField *pTitleField);
+
+private:
+    // POSITION
     Position m_oPosition;
-    Size m_oSize{ false };
+    // FRAMES
     StringElement m_strFrames{ Element::KW_FRAMES };
+    // HEADER
+    // FOOTER
+    // SIDE
+    // SIZE
+    Size m_oSize{ false };
+    // REPEATONX
+    // REPEATONY
+    // TYPE
+    // CLASS
+    // OVERFLOW
+    // STYLE
+    // COLOR
     StringElement m_strColor{ Element::KW_COLOR, "black", &COLOR };
+    // RGBCOLOR
+    // FILLCOLOR
     StringElement m_strFillColor{ Element::KW_FILLCOLOR, "white", &COLOR };
+    // RGBFILLCOLOR
+    // FILLSTYLE
     StringElement m_strFillStyle{ Element::KW_FILLSTYLE, "none", &FIELD_STYLE };
-    StringElement m_strTile{ Element::KW_TILE };
+    // SUBSTSIGN
+    // TILE
+    StringElement m_strTitle{ Element::KW_TITLE };
+    // HORIZONTAL
+    // VERTICAL
+
+    XFSForm *m_pForm = nullptr;
+    XFSField *m_pContentField = nullptr;
+    XFSField *m_pTitleField = nullptr;
 };
 
 #endif // XFSFRAME_H

@@ -1,9 +1,8 @@
 #include "xfs_form.h"
-#include "qjsonobject.h"
-
 #include "service/printer/form/xfs_field.h"
 #include "service/printer/form/xfs_form_repository.h"
 #include "service/printer/form/xfs_frame.h"
+#include <QJsonValue>
 
 XFSForm::XFSForm(const QString &strName, XFSFormRepository *parent) : BlockElement{ strName, parent }
 {
@@ -32,9 +31,13 @@ bool XFSForm::parse(TextLineProducer &lineProducer)
                     l_StrParameter.chop(1);
                     XFSField *l_pNewField = new XFSField(l_StrParameter, this);
                     if (l_pNewField->parse(lineProducer)) {
-                        addField(l_pNewField);
+                        if (!addField(l_pNewField)) {
+                            error(QString("Add field [%1] ERROR").arg(l_pNewField->name()));
+                            l_pNewField->deleteLater();
+                            return false;
+                        }
                     } else {
-                        error(QString("Load field [%1] ERROR").arg(l_pNewField->name()));
+                        error(QString("Parse field [%1] ERROR").arg(l_pNewField->name()));
                         l_pNewField->deleteLater();
                         return false;
                     }
@@ -43,7 +46,11 @@ bool XFSForm::parse(TextLineProducer &lineProducer)
                     l_StrParameter.chop(1);
                     XFSFrame *l_pNewFrame = new XFSFrame(l_StrParameter, this);
                     if (l_pNewFrame->parse(lineProducer)) {
-                        addFrame(l_pNewFrame);
+                        if (!addFrame(l_pNewFrame)) {
+                            error(QString("Add frame [%1] ERROR").arg(l_pNewFrame->name()));
+                            l_pNewFrame->deleteLater();
+                            return false;
+                        }
                     } else {
                         error(QString("Load field [%1] ERROR").arg(l_pNewFrame->name()));
                         l_pNewFrame->deleteLater();
@@ -71,39 +78,18 @@ bool XFSForm::parse(TextLineProducer &lineProducer)
 
 bool XFSForm::build()
 {
+    // Check frame link to field
     for (auto itr = m_framesHashByName.constBegin(); itr != m_framesHashByName.constEnd(); itr++) {
-        QString l_strFieldName = (*itr)->fieldName();
-        if (!l_strFieldName.isEmpty()) {
-            XFSField *l_pField = field(l_strFieldName);
-            if (l_pField == nullptr) {
-                error(QString("Can not find field [%1] for frame [%2]").arg(l_strFieldName, (*itr)->name()));
-                return false;
-            } else {
-                l_pField->setFrame(*itr);
-            }
-        }
-        QString l_strTileFieldName = (*itr)->tileFieldName();
-        if (!l_strTileFieldName.isEmpty()) {
-            XFSField *l_pField = field(l_strTileFieldName);
-            if (l_pField == nullptr) {
-                error(QString("Can not find field [%1] for tile of frame [%2]").arg(l_strFieldName, (*itr)->name()));
-                return false;
-            } else {
-                l_pField->setTileOfFrame(*itr);
-            }
+        if (!(*itr)->rebuild()) {
+            error(QString("Rebuild frame [%1] ERROR").arg((*itr)->name()));
+            return false;
         }
     }
-    // Check field flow
+    // Check field follows flow
     for (auto itr = m_fieldsHashByName.constBegin(); itr != m_fieldsHashByName.constEnd(); itr++) {
-        QString l_strFieldFollowsName = (*itr)->follows().value();
-        if (!l_strFieldFollowsName.isEmpty()) {
-            XFSField *l_pField = field(l_strFieldFollowsName);
-            if (l_pField == nullptr) {
-                error(QString("Can not find field [%1] to follows [%2]").arg(l_strFieldFollowsName, (*itr)->name()));
-                return false;
-            } else {
-                (*itr)->setFieldFollows(l_pField);
-            }
+        if (!(*itr)->rebuild()) {
+            error(QString("Rebuild field [%1] ERROR").arg((*itr)->name()));
+            return false;
         }
     }
     return true;
@@ -146,21 +132,40 @@ int XFSForm::dumpFields2StringList(QStringList &strLst) const
 
 XFSField *XFSForm::field(const QString &strName) const
 {
-
     return m_fieldsHashByName.value(strName, nullptr);
 }
 
-void XFSForm::addField(XFSField *pNewField)
+bool XFSForm::addField(XFSField *pNewField)
 {
-    m_fieldsHashByName.insert(pNewField->name(), pNewField);
-    m_fieldsMapByPosition.insert(pNewField->position(), pNewField);
+    if (m_fieldsHashByName.contains(pNewField->name())) {
+        error(QString("Form [%1] have duplicate field [%2]").arg(name(), pNewField->name()));
+        return false;
+    } else {
+        m_fieldsHashByName.insert(pNewField->name(), pNewField);
+    }
+
+    if (m_fieldsMapByPosition.contains(pNewField->position())) {
+        const XFSField *l_pField = m_fieldsMapByPosition.value(pNewField->position());
+        error(QString("Form [%1] have field [%2] and field [%3] same position") //
+                      .arg(name(), pNewField->name()) //
+                      .arg(l_pField->name()));
+        return false;
+    } else {
+        m_fieldsMapByPosition.insert(pNewField->position(), pNewField);
+    }
+    return true;
 }
 
-void XFSForm::addFrame(XFSFrame *pNewFrame)
+bool XFSForm::addFrame(XFSFrame *pNewFrame)
 {
-    m_framesHashByName.insert(pNewFrame->name(), pNewFrame);
+    if (m_framesHashByName.contains(pNewFrame->name())) {
+        error(QString("Form [%1] have duplicate frame [%2]").arg(name(), pNewFrame->name()));
+        return false;
+    } else {
+        m_framesHashByName.insert(pNewFrame->name(), pNewFrame);
+        return true;
+    }
 }
-
 bool XFSForm::dump2Json(QJsonObject &jsonObject) const
 {
     jsonObject["formName"] = this->name();

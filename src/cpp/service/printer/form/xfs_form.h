@@ -1,8 +1,6 @@
 #ifndef XFSFORM_H
 #define XFSFORM_H
 
-#include "qjsonarray.h"
-#include "qjsonvalue.h"
 #include "selfservice_object.h"
 #include "service/printer/form/element/alignment.h"
 #include "service/printer/form/element/number_element.h"
@@ -12,6 +10,9 @@
 #include "service/printer/form/xfs_field.h"
 #include "service/printer/form/xfs_frame.h"
 #include <QHash>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QJsonValue>
 #include <QObject>
 
 class XFSFormRepository;
@@ -19,13 +20,13 @@ class XFSFormRepository;
 class XFSForm : public BlockElement
 {
     Q_OBJECT
+
 public:
     inline static QRegularExpression REGX_KEYWORD{ "(^\\w+)(\\s+)(.+)" };
     inline static QRegularExpression REGX_PARA_SEP{ "\\s*,\\s*" };
 
     explicit XFSForm(const QString &strName, XFSFormRepository *parent);
     virtual ~XFSForm();
-    bool parse(TextLineProducer &lineProducer) override;
     bool build();
 
     inline const QMap<Position, XFSField *> &fieldMapByPosition() const { return m_fieldsMapByPosition; };
@@ -35,37 +36,51 @@ public:
     inline const Size &size() const { return m_oSize; }
     inline const Alignment &alignment() const { return m_oAlignment; }
 
+    XFSField *field(const QString &strName) const;
     QStringList fieldsName();
-    // QStringList fields();
     int dumpFieldsName2Json(QJsonArray &jaResults) const;
     int dumpFileds2Json(QJsonObject &joResults) const;
     int dumpFields2StringList(QStringList &strLst) const;
-    XFSField *field(const QString &strName) const;
+
+    // BlockElement interface
+public:
+    bool dump2Json(QJsonObject &jsonObject) const override;
+    bool parse(TextLineProducer &lineProducer) override;
 
 private:
+    // UNIT
     Unit m_oUnit;
+    // SIZE
     Size m_oSize;
+    // ALIGNMENT
     Alignment m_oAlignment;
+    // ORIENTATION
     StringElement m_strOrientation{ Element::KW_ORIENTATION };
+    // SKEW
     NumberElement m_iSkew{ Element::KW_SKEW, "skew" };
+    // VERSION
     Version m_oVersion;
-    int m_iCpi;
-    int m_iLpi;
-    int m_pointSize;
-    NumberElement m_iLanguage{ Element::KW_LANGUAGE };
+    // CPI
+    NumberElement m_iCPI{ Element::KW_CPI };
+    // LPI
+    NumberElement m_iLPI{ Element::KW_CPI };
+    // POINTSIZE
+    NumberElement m_iPointSize{ Element::KW_POINTSIZE };
+    // COPYRIGHT
     StringElement m_strCopyRight{ Element::KW_COPYRIGHT };
-    QString m_strTitle{};
+    // TITLE
+    StringElement m_strTitle{ Element::KW_TITLE };
+    // LANGUAGE
+    NumberElement m_iLanguage{ Element::KW_LANGUAGE };
+    // COMMENT
+    StringElement m_strComment{ Element::KW_COMMENT };
 
-    void addField(XFSField *pNewField);
-    void addFrame(XFSFrame *pNewFrame);
+    bool addField(XFSField *pNewField);
+    bool addFrame(XFSFrame *pNewFrame);
 
     QHash<QString, XFSField *> m_fieldsHashByName;
     QHash<QString, XFSFrame *> m_framesHashByName;
     QMap<Position, XFSField *> m_fieldsMapByPosition;
-
-    // BlockElement interface
-public:
-    virtual bool dump2Json(QJsonObject &jsonObject) const override;
 };
 
 #endif // XFSFORM_H
