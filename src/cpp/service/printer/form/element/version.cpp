@@ -1,9 +1,12 @@
 #include "version.h"
 #include "service/printer/form/xfs_form.h"
 
+Version::Version() : Element(Element::KW_VERSION, 4) { }
+
+Version::~Version() { }
+
 bool Version::load(const QString &strPara)
 {
-    Element::load(strPara);
     QStringList l_listPara = strPara.split(XFSForm::REGX_PARA_SEP);
     if (l_listPara.size() != numOfPara()) {
         return false;
@@ -16,7 +19,7 @@ bool Version::load(const QString &strPara)
     }
 }
 
-bool Version::dump2Json(QJsonObject &jsonObject)
+bool Version::dump2Json(QJsonObject &jsonObject) const
 {
     jsonObject["versionMajor"] = m_iMajor;
     jsonObject["versionMinor"] = m_iMinor;

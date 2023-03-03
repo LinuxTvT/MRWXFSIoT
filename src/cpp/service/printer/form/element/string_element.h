@@ -12,9 +12,14 @@ public:
                            QHash<QString, QString> *pValues = nullptr, //
                            const QString &strJsonKey = QString{});
 
-    virtual bool load(const QString &strPara) override;
     inline const QString &value() const { return m_strValue; }
     inline bool is(const QString &str) const { return (m_strValue == str); }
+    inline bool isEmpty() const { return m_strValue.isEmpty(); }
+
+    // Element interface
+public:
+    virtual bool load(const QString &strPara) override;
+    virtual bool dump2Json(QJsonObject &jsonObject) const override;
 
 protected:
     inline QHash<QString, QString> *defineValues() const { return m_pValues; }
@@ -23,10 +28,6 @@ protected:
 private:
     QString m_strValue;
     QHash<QString, QString> *m_pValues = nullptr;
-
-    // Element interface
-public:
-    virtual bool dump2Json(QJsonObject &jsonObject) override;
 };
 
 }

@@ -14,7 +14,6 @@ StringCombinationElement::~StringCombinationElement() { }
 
 bool StringCombinationElement::load(const QString &strPara)
 {
-    Element::load(strPara);
     setValue(strPara);
     QStringList l_listKeywords = value().split('|');
     for (auto itr = l_listKeywords.constBegin(); itr != l_listKeywords.constEnd(); itr++) {

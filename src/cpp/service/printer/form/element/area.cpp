@@ -11,10 +11,11 @@ bool Area::load(const QString &strPara)
 {
     QStringList l_listPara = strPara.split(XFSForm::REGX_PARA_SEP);
     if (l_listPara.size() == 4) {
-        m_iX = l_listPara[0].toInt();
-        m_iY = l_listPara[1].toInt();
-        m_iWidth = l_listPara[2].toInt();
-        m_iHeight = l_listPara[3].toInt();
+        m_qRect.setRect(l_listPara[0].toInt(), //
+                           l_listPara[1].toInt(), //
+                           l_listPara[2].toInt(), //
+                           l_listPara[3].toInt());
+
         return true;
     } else {
         return false;

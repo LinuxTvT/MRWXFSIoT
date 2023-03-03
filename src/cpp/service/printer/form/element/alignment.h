@@ -2,6 +2,7 @@
 #define ALIGNMENT_H
 
 #include "element.h"
+#include <QPoint>
 
 namespace xfs_printer {
 
@@ -18,22 +19,20 @@ public:
                                                      { "TOPRIGHT", "topRight" }, //
                                                      { "BOTTOMLEFT", "bottomLeft" }, //
                                                      { "BOTTOMRIGHT", "bottomRight" } };
-    Alignment() : Element(Element::KW_ALIGNMENT, 3) { }
+    explicit Alignment();
+    virtual ~Alignment();
+
     inline const QString &alignment() const { return m_strAlignment; }
-    inline int xOffset() const { return m_iXOffset; }
-    inline int yOffset() const { return m_iYOffset; }
 
     virtual bool load(const QString &strPara) override;
 
 private:
-    QString m_strAlignment;
-    int m_iXOffset;
-    int m_iYOffset;
+    QString m_strAlignment{ "topLeft" };
+    QPoint m_pointOffset{ 0, 0 };
     bool setAlignment(const QString &strAlignment);
 
-    // Element interface
 public:
-    virtual bool dump2Json(QJsonObject &jsonObject) override;
+    virtual bool dump2Json(QJsonObject &jsonObject) const override;
 };
 }
 #endif // ALIGNMENT_H

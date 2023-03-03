@@ -14,6 +14,9 @@ public:
                                       const QString &strJsonKey = QString{});
     virtual ~StringCombinationElement();
     const QStringList &listValues() const { return m_strListValues; }
+
+    // StringElement interface
+public:
     virtual bool load(const QString &strPara) override;
 
 private:

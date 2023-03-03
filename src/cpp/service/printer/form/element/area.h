@@ -2,6 +2,7 @@
 #define AREA_H
 
 #include "element.h"
+#include <QRect>
 
 namespace xfs_printer {
 
@@ -12,10 +13,7 @@ public:
     virtual ~Area();
 
 private:
-    int m_iX;
-    int m_iY;
-    int m_iWidth;
-    int m_iHeight;
+    QRect m_qRect;
 
     // Element interface
 public:

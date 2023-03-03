@@ -7,14 +7,10 @@ Size::Size(bool isDump2Json) //
 {
 }
 
-Size::~Size()
-{
-
-}
+Size::~Size() { }
 
 bool Size::load(const QString &strPara)
 {
-    Element::load(strPara);
     QStringList l_listPara = strPara.split(XFSForm::REGX_PARA_SEP);
     if (l_listPara.size() != 2) {
         return false;
@@ -25,7 +21,7 @@ bool Size::load(const QString &strPara)
     }
 }
 
-bool Size::dump2Json(QJsonObject &jsonObject)
+bool Size::dump2Json(QJsonObject &jsonObject) const
 {
     if (m_isDump2Json) {
         jsonObject["width"] = m_qSize.width();

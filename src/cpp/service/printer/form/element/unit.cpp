@@ -10,6 +10,8 @@ Unit::Unit(const Unit &other) : Unit{}
     m_iY = other.m_iY;
 }
 
+Unit::~Unit() { }
+
 bool Unit::setBase(const QString &strBase)
 {
     if (BASE.contains(strBase)) {
@@ -22,7 +24,6 @@ bool Unit::setBase(const QString &strBase)
 
 bool Unit::load(const QString &strPara)
 {
-    Element::load(strPara);
     QStringList l_listPara = strPara.split(XFSForm::REGX_PARA_SEP);
     if (l_listPara.size() != numOfPara()) {
         return false;
@@ -36,7 +37,7 @@ bool Unit::load(const QString &strPara)
     return true;
 }
 
-bool Unit::dump2Json(QJsonObject &jsonObject)
+bool Unit::dump2Json(QJsonObject &jsonObject) const
 {
     jsonObject["base"] = m_strBase;
     jsonObject["unitX"] = m_iX;

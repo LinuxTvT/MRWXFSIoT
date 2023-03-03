@@ -11,12 +11,16 @@ class Position : public Element
 public:
     Position() : Element(Element::KW_POSITION, 2) { }
     Position(const Position &other);
-    virtual bool load(const QString &strPara) override;
+
     bool operator<(Position const &obj) const;
     inline int x() const { return m_qPoint.x(); }
     inline int y() const { return m_qPoint.y(); }
     inline int z() const { return m_iZ; }
     inline const QPoint &qPoint() const { return m_qPoint; }
+
+    // Element interface
+public:
+    virtual bool load(const QString &strPara) override;
 
 private:
     QPoint m_qPoint;

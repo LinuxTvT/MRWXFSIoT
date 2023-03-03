@@ -12,8 +12,11 @@ public:
     Size(bool isDump2Json = true);
     virtual ~Size();
     inline const QSize &qSize() const { return m_qSize; }
-    bool load(const QString &strPara) override;
-    virtual bool dump2Json(QJsonObject &jsonObject) override;
+
+    // Element interface
+public:
+    virtual bool load(const QString &strPara) override;
+    virtual bool dump2Json(QJsonObject &jsonObject) const override;
 
 private:
     QSize m_qSize;

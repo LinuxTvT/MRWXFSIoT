@@ -1,6 +1,13 @@
 #include "alignment.h"
 #include "service/printer/form/xfs_form.h"
 
+Alignment::Alignment() : Element(Element::KW_ALIGNMENT, 3) { }
+
+Alignment::~Alignment()
+{
+
+}
+
 bool Alignment::load(const QString &strPara)
 {
     QStringList l_listPara = strPara.split(XFSForm::REGX_PARA_SEP);
@@ -10,8 +17,8 @@ bool Alignment::load(const QString &strPara)
         if (!setAlignment(l_listPara[0])) {
             return false;
         }
-        m_iXOffset = l_listPara[1].toInt();
-        m_iYOffset = l_listPara[2].toInt();
+        m_pointOffset.setX(l_listPara[1].toInt());
+        m_pointOffset.setY(l_listPara[2].toInt());
     }
     return true;
 }
@@ -26,10 +33,10 @@ bool Alignment::setAlignment(const QString &strAlignment)
     }
 }
 
-bool Alignment::dump2Json(QJsonObject &jsonObject)
+bool Alignment::dump2Json(QJsonObject &jsonObject) const
 {
     jsonObject["alignment"] = m_strAlignment;
-    jsonObject["offsetX"] = m_iXOffset;
-    jsonObject["offsetX"] = m_iYOffset;
+    jsonObject["offsetX"] = m_pointOffset.x();
+    jsonObject["offsetY"] = m_pointOffset.y();
     return true;
 }

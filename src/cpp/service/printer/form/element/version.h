@@ -8,18 +8,19 @@ namespace xfs_printer {
 class Version : public Element
 {
 public:
-    Version() : Element(Element::KW_VERSION, 4) { }
+    explicit Version();
+    virtual ~Version();
+
+    // Element interface
+public:
     virtual bool load(const QString &strPara) override;
+    virtual bool dump2Json(QJsonObject &jsonObject) const override;
 
 private:
     int m_iMajor;
     int m_iMinor;
     QString m_strDate;
     QString m_strAuthor;
-
-    // Element interface
-public:
-    virtual bool dump2Json(QJsonObject &jsonObject) override;
 };
 
 }

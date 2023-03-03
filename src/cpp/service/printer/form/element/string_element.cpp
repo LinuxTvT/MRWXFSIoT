@@ -12,7 +12,6 @@ StringElement::StringElement(const QString &strKeyWord, //
 
 bool StringElement::load(const QString &strPara)
 {
-    Element::load(strPara);
     if (m_pValues == nullptr) {
         m_strValue = strPara.mid(1, strPara.length() - 2);
         return true;
@@ -26,7 +25,7 @@ bool StringElement::load(const QString &strPara)
     }
 }
 
-bool StringElement::dump2Json(QJsonObject &jsonObject)
+bool StringElement::dump2Json(QJsonObject &jsonObject) const
 {
     if (!jsonKey().isEmpty()) {
         jsonObject[jsonKey()] = this->m_strValue;
