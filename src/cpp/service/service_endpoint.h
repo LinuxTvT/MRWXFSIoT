@@ -37,9 +37,6 @@ protected:
     virtual bool onEventEvent(XFSIoTMsgEvent *pEvent);
     virtual bool event(QEvent *event) override;
 
-    // public slots:
-    //    void start();
-
 private slots:
     void onNewConnection();
 

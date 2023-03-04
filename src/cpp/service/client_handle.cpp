@@ -1,19 +1,20 @@
 #include "client_handle.h"
+#include "qglobal.h"
 #include "qjsondocument.h"
-#include "xfs_iot_standard.h"
 #include "service_endpoint.h"
+#include "xfs_iot_standard.h"
 #include <QCoreApplication>
 
 ClientHandle::ClientHandle(QWebSocket *pWebSocket, AbstractService *pService, ServiceEndpoint *parent)
     : SelfServiceObject{ parent }, m_pWebsocket(pWebSocket), m_pService(pService)
 {
-    s_uiClientID++;
-    if (s_uiClientID == MAX_CLIENT_ID) {
-        s_uiClientID = 1;
+    CLIENT_INDEX++;
+    if (CLIENT_INDEX == MAX_CLIENT_ID) {
+        CLIENT_INDEX = 1;
     }
-    m_uiID = s_uiClientID;
+    m_uiID = CLIENT_INDEX;
 
-    setName(QString("%1:%2, id [%3]")
+    setName(QString("%1_%2_%3") //
                     .arg(pWebSocket->peerAddress().toString())
                     .arg(pWebSocket->peerPort())
                     .arg(m_uiID));
@@ -22,6 +23,7 @@ ClientHandle::ClientHandle(QWebSocket *pWebSocket, AbstractService *pService, Se
     connect(m_pWebsocket, &QWebSocket::binaryMessageReceived, this, &ClientHandle::processBinaryMessage);
     connect(m_pWebsocket, &QWebSocket::disconnected, this, &ClientHandle::socketDisconnected);
     postEvent2Service(new XFSIoTClientEvent(XFSIoTMsgEvent::ClientConnected, m_uiID));
+    log(QString("Client [%1] was created").arg(name()));
 }
 
 ClientHandle::~ClientHandle()
@@ -31,6 +33,14 @@ ClientHandle::~ClientHandle()
         m_pWebsocket->deleteLater();
     }
     log(QString("Client [%1] deleted").arg(name()));
+}
+
+bool ClientHandle::sendMessage(const QJsonObject &joHeader, const QJsonObject &joPayload)
+{
+    QJsonObject l_joMessage;
+    l_joMessage[XFSIoTStandard::JK_HEADER] = joHeader;
+    l_joMessage[XFSIoTStandard::JK_PAYLOAD] = joPayload;
+    return sendMessage(l_joMessage);
 }
 
 bool ClientHandle::sendMessage(const QString message)
@@ -50,23 +60,18 @@ bool ClientHandle::sendMessage(const QJsonObject &joMessage)
     return sendMessage(l_jsonDoc.toJson());
 }
 
-bool ClientHandle::sendAckMessage(const QJsonObject &joHeader, const QString &strStatus, const QString &strErr)
+bool ClientHandle::sendAckMessage(const QJsonValue &joHeader, const QString &strStatus, const QString &strErr)
 {
-    QJsonObject l_joRoot;
+    // Logging error if have
+    if (!strErr.isEmpty()) {
+        error(strErr);
+    }
     QJsonObject l_joPayload;
     l_joPayload[XFSIoTStandard::JK_STATUS] = strStatus;
     l_joPayload[XFSIoTStandard::JK_ERROR_DESCRIPTION] = strErr;
-    QJsonObject l_joHeader = joHeader;
+    QJsonObject l_joHeader = joHeader.toObject();
     l_joHeader[XFSIoTStandard::JK_TYPE] = XFSIoTStandard::JV_TYPE_ACKNOWLEDGE;
-    l_joRoot[XFSIoTStandard::JK_HEADER] = l_joHeader;
-    l_joRoot[XFSIoTStandard::JK_PAYLOAD] = l_joPayload;
-    QJsonDocument l_jsonDoc = QJsonDocument(l_joRoot);
-    return m_pWebsocket->sendTextMessage(l_jsonDoc.toJson());
-}
-
-bool ClientHandle::sendAckMessage(const QJsonValue &joHeader, const QString &strStatus, const QString &strErr)
-{
-    return sendAckMessage(joHeader.toObject(), strStatus, strErr);
+    return sendMessage(l_joHeader, l_joPayload);
 }
 
 void ClientHandle::processTextMessage(QString message)
@@ -78,9 +83,9 @@ void ClientHandle::processTextMessage(QString message)
     QJsonDocument l_jsonDocument = QJsonDocument::fromJson(message.toUtf8(), &l_jsonParseError);
     if (l_jsonParseError.error != QJsonParseError::NoError) {
         // Parse message error, Send invalid to client
-        QString l_strErr = QString("Parse JSON message error [%1]").arg(l_jsonParseError.errorString());
-        error(l_strErr);
-        sendAckMessage(QJsonObject(), XFSIoTStandard::JV_INVALID_MESSAGE, l_strErr);
+        sendAckMessage(QJsonObject(), //
+                       XFSIoTStandard::JV_INVALID_MESSAGE,
+                       QString("Parse JSON message error [%1]").arg(l_jsonParseError.errorString()));
     } else {
         // Parse message success
         const QJsonValue l_jsvHeader = l_jsonDocument[XFSIoTStandard::JK_HEADER];
@@ -90,40 +95,42 @@ void ClientHandle::processTextMessage(QString message)
             // Service only support <command> message type
             if (l_strType != XFSIoTStandard::JV_TYPE_COMMAND) {
                 // Send error ack to client
-                QString l_strErr = QString("Invalid request type [%1]").arg(l_strType);
-                error(l_strErr);
-                sendAckMessage(l_jsvHeader, XFSIoTStandard::JV_INVALID_MESSAGE, l_strErr);
+                sendAckMessage(l_jsvHeader, //
+                               XFSIoTStandard::JV_INVALID_MESSAGE, //
+                               QString("Invalid request type [%1]").arg(l_strType));
                 return;
             } else {
                 int l_iRequetId = l_jsvHeader[XFSIoTStandard::JK_REQUEST_ID].toInt();
                 QString l_strName = l_jsvHeader[XFSIoTStandard::JK_NAME].toString();
                 QStringList l_strSplitName = l_strName.split('.');
                 if (l_strSplitName.size() != 2) {
-                    QString l_strError =
-                            QString("Invalid command name, it have to [pattern: ^[0-9A-Za-z]*\\.[0-9A-Za-z]*$]")
-                                    .arg(l_strName);
-                    error(l_strError);
-                    sendAckMessage(l_jsvHeader, XFSIoTStandard::JV_INVALID_MESSAGE, l_strError);
+                    sendAckMessage(l_jsvHeader, //
+                                   XFSIoTStandard::JV_INVALID_MESSAGE, //
+                                   QString("Invalid command name, " //
+                                           "it have to [pattern: ^[0-9A-Za-z]*\\.[0-9A-Za-z]*$]")
+                                           .arg(l_strName));
                 } else {
-                    if (this->handleClientCommand(l_iRequetId, l_strName, l_jsvPayload.toObject())) {
+                    if (handleClientCommand(l_iRequetId, l_strName, l_jsvPayload.toObject())) {
                         sendAckMessage(l_jsvHeader);
                     } else {
                         // Send error ack to client
-                        QString l_strErr = QString("Can't handle command [%1]").arg(l_strName);
-                        error(l_strErr);
-                        sendAckMessage(l_jsvHeader, XFSIoTStandard::JV_INVALID_MESSAGE, l_strErr);
+                        sendAckMessage(l_jsvHeader, //
+                                       XFSIoTStandard::JV_INVALID_MESSAGE, //
+                                       QString("Can't handle command [%1]").arg(l_strName));
                     }
                 }
             }
         } else {
-            QString l_strErr = QStringLiteral("Header not as JSON object");
-            error(l_strErr);
-            sendAckMessage(QJsonValue(), XFSIoTStandard::JV_INVALID_MESSAGE, l_strErr);
+            sendAckMessage(QJsonValue(), //
+                           XFSIoTStandard::JV_INVALID_MESSAGE, //
+                           QStringLiteral("Header not as JSON object"));
         }
     }
 }
 
-bool ClientHandle::handleClientCommand(int iRequetId, const QString &strCommandName, const QJsonObject &jsObject)
+bool ClientHandle::handleClientCommand(int iRequetId, //
+                                       const QString &strCommandName, //
+                                       const QJsonObject &jsObject)
 {
     postEvent2Service(new XFSIoTCommandEvent(id(), iRequetId, strCommandName, jsObject));
     return true;
@@ -136,12 +143,15 @@ void ClientHandle::postEvent2Service(QEvent *pEvent) const
 
 void ClientHandle::processBinaryMessage(QByteArray message)
 {
-    error(QString("Don't support binary message: hex[%1]").arg(QString::fromUtf8(message.toHex())));
+    Q_UNUSED(message)
+    QString l_strErr = QStringLiteral("Don't support binary message");
+    error(l_strErr);
+    sendAckMessage(QJsonValue(), XFSIoTStandard::JV_INVALID_MESSAGE, l_strErr);
 }
 
 void ClientHandle::socketDisconnected()
 {
     postEvent2Service(new XFSIoTClientEvent(XFSIoTMsgEvent::ClientDisconnect, m_uiID));
-    ServiceEndpoint *l_pEndpoint = (ServiceEndpoint *)this->parent();
+    ServiceEndpoint *l_pEndpoint = (ServiceEndpoint *)parent();
     l_pEndpoint->delClient(m_uiID);
 }

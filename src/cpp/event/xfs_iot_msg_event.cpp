@@ -50,15 +50,13 @@ const QString &XFSIoTMsgEvent::xfsIotType() const
     }
 }
 
-bool XFSIoTMsgEvent::buildJsonMsg(QJsonObject &joBuilder)
+QJsonObject XFSIoTMsgEvent::header() const
 {
     QJsonObject l_joHeader;
     l_joHeader[XFSIoTStandard::JK_TYPE] = xfsIotType();
     l_joHeader[XFSIoTStandard::JK_NAME] = m_strCommandName;
     l_joHeader[XFSIoTStandard::JK_REQUEST_ID] = m_iReqeustId;
-    joBuilder[XFSIoTStandard::JK_HEADER] = l_joHeader;
-    joBuilder[XFSIoTStandard::JK_PAYLOAD] = m_joPayload;
-    return true;
+    return l_joHeader;
 }
 
 XFSIoTCommandEvent::XFSIoTCommandEvent(uint uiClientId, //

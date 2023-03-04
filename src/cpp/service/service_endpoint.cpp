@@ -32,9 +32,7 @@ bool ServiceEndpoint::handleServiceMsg(XFSIoTMsgEvent *pEvent)
 {
     ClientHandle *l_pClient = findClient(pEvent->clientId());
     if (l_pClient != nullptr) {
-        QJsonObject l_joMessage;
-        pEvent->buildJsonMsg(l_joMessage);
-        return l_pClient->sendMessage(l_joMessage);
+        return l_pClient->sendMessage(pEvent->header(), pEvent->payLoad());
     } else {
         error(QString("Can't find client id [%1], Maybe It disconnected").arg(pEvent->clientId()));
         return false;

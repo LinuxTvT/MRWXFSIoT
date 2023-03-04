@@ -27,7 +27,7 @@ public:
     bool is(uint uiClientID, int iRequestID = -1);
     bool is(uint uiClientID, const QSet<int> &iRequestIDs);
     const QString &xfsIotType() const;
-    bool buildJsonMsg(QJsonObject &joBuilder);
+    QJsonObject header() const;
 
 private:
     uint m_uiClientId;
