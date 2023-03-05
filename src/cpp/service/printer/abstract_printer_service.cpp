@@ -3,12 +3,10 @@
 AbstractPrinterService::AbstractPrinterService(const QString &strName, //
                                                const QString &strFileConfig)
     : AbstractService{ strName, strFileConfig }
-{ //
+{
 }
 
-AbstractPrinterService::~AbstractPrinterService()
-{ //
-}
+AbstractPrinterService::~AbstractPrinterService() { }
 
 void AbstractPrinterService::notifyFieldEvent(XFSIoTCommandEvent *pCommandEvent, //
                                               const QString &strEventName, //

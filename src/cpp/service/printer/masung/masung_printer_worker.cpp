@@ -172,6 +172,9 @@ void MasungPrinterWorker::doPrintForm(XFSIoTCommandEvent *pCommandEvent)
 
     for (auto itr = l_refFrames.constBegin(); itr != l_refFrames.constEnd(); itr++) {
         printFrame((*itr), l_pBMPPrinter);
+        if ((*itr)->titleField() != nullptr) {
+            printField((*itr)->titleField(), l_joFieldsPayload, l_setFieldsPrinted, l_pBMPPrinter, true);
+        }
     }
     l_pBMPPrinter->printToFile("outs/BMPPrinter.bmp");
     l_pBMPPrinter->deleteLater();
@@ -285,8 +288,7 @@ void MasungPrinterWorker::printField(XFSField *pField, const QString &strValue, 
 
 void MasungPrinterWorker::printFrame(XFSFrame *pFrame, BMPPrinter *pBMPPrinter)
 {
-    pBMPPrinter->goTo(pFrame->position().x(), pFrame->position().y());
-    pBMPPrinter->printFrame(pFrame->size().qSize());
+    pBMPPrinter->printFrame(pFrame);
 }
 
 void MasungPrinterWorker::updateDeviceInfo()

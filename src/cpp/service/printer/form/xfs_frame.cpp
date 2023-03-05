@@ -13,6 +13,13 @@ XFSFrame::XFSFrame(const QString &strName, XFSForm *parent) //
     addElement(&m_strTitle);
 }
 
+QRect XFSFrame::titlelRect(const QSize &titleSize) const
+{
+    int l_iTop = topLeft().y() - (titleSize.height() / 2);
+    int l_iLeft = topLeft().x() + ((width() - titleSize.width()) / 2);
+    return QRect{ QPoint{ l_iLeft, l_iTop }, titleSize };
+}
+
 bool XFSFrame::rebuild()
 {
     if (m_pForm == nullptr) {

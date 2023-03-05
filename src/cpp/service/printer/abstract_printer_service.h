@@ -13,7 +13,7 @@ public:
                                     const QString &strFileConfig);
     virtual ~AbstractPrinterService();
 
-    // virtual STATUS_FUNCTION(Printer) = 0;
+    // XFS IoT fucntions
     virtual SERVICE_FUNCTION(Printer, GetFormList) = 0;
     virtual SERVICE_FUNCTION(Printer, GetMediaList) = 0;
     virtual SERVICE_FUNCTION(Printer, GetQueryForm) = 0;

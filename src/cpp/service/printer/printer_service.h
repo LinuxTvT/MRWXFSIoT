@@ -18,7 +18,7 @@ class PrinterService : public AbstractPrinterService
 
 public:
     Q_INVOKABLE explicit PrinterService(const QString &strName, const QString &strFileConfig);
-    virtual ~PrinterService() { }
+    virtual ~PrinterService();
 
     SERVICE_FUNCTION(Common, Status) override;
     SERVICE_FUNCTION(Printer, GetFormList) override;

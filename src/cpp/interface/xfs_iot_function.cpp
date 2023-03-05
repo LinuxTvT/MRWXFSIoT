@@ -23,12 +23,11 @@ XFSIoTFunction::~XFSIoTFunction()
 
 bool XFSIoTFunction::invoke(AbstractService *pService, XFSIoTCommandEvent *pEvent) const
 {
-    // clang-format off
-    return QMetaObject::invokeMethod(pService,
-                                     m_pCharInvokeName,
-                                     Qt::DirectConnection,
-                                     Q_ARG(XFSIoTCommandEvent*, pEvent));
-    // clang-format on
+
+    return QMetaObject::invokeMethod(pService, //
+                                     m_pCharInvokeName, //
+                                     Qt::DirectConnection, //
+                                     Q_ARG(XFSIoTCommandEvent *, pEvent));
 }
 
 bool XFSIoTFunction::isSupport(AbstractService *pService) const

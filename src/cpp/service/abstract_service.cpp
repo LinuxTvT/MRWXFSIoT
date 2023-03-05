@@ -252,8 +252,8 @@ bool AbstractService::onCommand(XFSIoTCommandEvent *pEvent)
                              QString("Invalid command name, it have to [pattern: ^[0-9A-Za-z]*\\.[0-9A-Za-z]*$]") //
                                      .arg(pEvent->commandName()));
     } else {
-        debug(QString("Call: Client [%1] -> [%2].[%3]")
-                      .arg(pEvent->clientId())
+        debug(QString("Call: Client [%1] -> [%2].[%3]") //
+                      .arg(pEvent->clientId()) //
                       .arg(l_strCmdStruct[0], l_strCmdStruct[1]));
         if (this->isSupportInterface(l_strCmdStruct[0])) {
             XFSIoTInterface *l_pInterface = m_hInterfacesList.value(l_strCmdStruct[0]);

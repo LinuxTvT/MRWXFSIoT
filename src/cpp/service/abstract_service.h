@@ -20,7 +20,6 @@ class AbstractService : public RunableObject
 {
     Q_OBJECT
 public:
-    inline static const QString JK_ITEM_STATUS_COMMON = QStringLiteral("Status.common");
     static void setInterfaceRepository(InterfaceRepository *pInterfaceRepository);
 
 private:
@@ -29,6 +28,7 @@ private:
 public:
     explicit AbstractService(const QString &strName, const QString &strFileConfig);
     virtual ~AbstractService();
+
     bool load(const QJsonArray &jaInterfacesList);
     inline void setEndpoint(ServiceEndpoint *pEndpoint) { m_pEndpoint = pEndpoint; }
     inline AbstractDeviceWorker *deviceWorker() { return m_pDeviceWorker; }
@@ -36,7 +36,7 @@ public:
     bool isSupportInterface(const QString &strInterfaceName) const;
 
     // QObject interface
-    virtual bool event(QEvent *event) override;
+    bool event(QEvent *event) override;
 
     // SelfServiceObject interface
     virtual bool loadConfig(const QJsonObject &config) override;
@@ -53,7 +53,7 @@ public:
     bool onClientConnected(int iClientID);
     bool onClientDisconnected(int iClientID);
 
-    // Notify completed message to client
+    // Notify EVENT to Endpoint to send messages to client
 public:
     void notifyEvent(XFSIoTMsgEvent *event) const;
     void notifyCompletion(const XFSIoTCommandEvent *pEventCmd, // Event of command

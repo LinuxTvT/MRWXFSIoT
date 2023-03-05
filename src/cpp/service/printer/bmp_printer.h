@@ -19,9 +19,7 @@ public:
     virtual ~BMPPrinter();
     void printField(const XFSField *pField, const QMap<int, QString> &values, bool isFollows = false);
     void printField(const XFSField *pField, const QString &value, bool isFollows = false);
-    void printFrame(int iWidth, int iHeight);
-    void printFrame(const QSize &size);
-    void goTo(int x, int y);
+    void printFrame(XFSFrame *pFrame);
     void printToFile(const QString &strPath);
 
 protected:

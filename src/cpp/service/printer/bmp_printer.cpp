@@ -102,26 +102,15 @@ void BMPPrinter::printField(const XFSField *pField, const QRect &rect, const QSt
         m_pPainter->drawImage(toPixel(rect), l_imageField);
     }
     m_iCurY = rect.bottom();
+    printToFile("outs/BMPPrinter.bmp");
 }
 
-void BMPPrinter::printFrame(int iWidth, int iHeight)
+void BMPPrinter::printFrame(XFSFrame *pFrame)
 {
     m_pPainter->setBrush(QBrush{ Qt::color0 });
-    m_pPainter->drawRect(m_iCurX + 130, m_iCurY - 15, 240, 30);
-
     m_pPainter->setBrush(Qt::BDiagPattern);
-    m_pPainter->drawRect(m_iCurX, m_iCurY, toPixelWidth(iWidth), toPixelHeight(iHeight));
-}
-
-void BMPPrinter::printFrame(const QSize &size)
-{
-    printFrame(size.width(), size.height());
-}
-
-void BMPPrinter::goTo(int x, int y)
-{
-    m_iCurX = toPixelWidth(x);
-    m_iCurY = toPixelHeight(y + 1);
+    m_pPainter->drawRect(toPixel(pFrame->rect()));
+    printToFile("outs/BMPPrinter.bmp");
 }
 
 void BMPPrinter::printToFile(const QString &strPath)

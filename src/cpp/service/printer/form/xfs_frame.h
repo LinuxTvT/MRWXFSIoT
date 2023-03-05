@@ -6,6 +6,8 @@
 #include "service/printer/form/element/size.h"
 #include "service/printer/form/element/string_element.h"
 #include <QObject>
+#include <QPoint>
+#include <QRect>
 
 class XFSForm;
 class XFSField;
@@ -38,7 +40,16 @@ public:
     virtual ~XFSFrame() { }
 
     inline const Position &position() const { return m_oPosition; }
+    inline const QPoint &topLeft() const { return m_oPosition.qPoint(); }
     inline const Size &size() const { return m_oSize; }
+    inline const QSize &qSize() const { return m_oSize.qSize(); }
+    inline int width() const { return qSize().width(); }
+    inline int height() const { return qSize().height(); }
+    inline QRect rect() const { return QRect{ topLeft(), qSize() }; }
+
+    inline const XFSField *titleField() const { return m_pTitleField; }
+
+    QRect titlelRect(const QSize &titleSize) const;
 
     bool rebuild();
 

@@ -11,6 +11,13 @@ PrinterService::PrinterService(const QString &strName, //
     : AbstractPrinterService{ strName, //
                               strFileConfig }
 {
+    log(QString("Created PrinterService object, name [%1], configs file [%2]") //
+                .arg(strName, strFileConfig));
+}
+
+PrinterService::~PrinterService()
+{
+    log(QString("Destroy PrinterService object, name [%1]").arg(name()));
 }
 
 const XFSForm *PrinterService::form(const QString &strFormName) const
